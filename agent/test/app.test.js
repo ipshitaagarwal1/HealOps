@@ -47,6 +47,33 @@ test('webhook rejects bad bodies with 400', async () => {
   });
 });
 
+test('ticket endpoints require the admin token', async () => {
+  const ticketService = { approve: async (id) => ({ ticket_id: id, status: 'approved', result: { ok: true } }) };
+  await withServer({ webhook: { route: () => {} }, ticketService, adminToken: 'right-token-123456' }, async (base) => {
+    const call = (headers, id = 5) => fetch(`${base}/api/tickets/${id}/approve`, { method: 'POST', headers });
+    assert.equal((await call({})).status, 401);
+    assert.equal((await call({ 'x-admin-token': 'wrong-token-123456' })).status, 401);
+    const good = await call({ 'x-admin-token': 'right-token-123456' });
+    assert.equal(good.status, 200);
+    assert.equal((await good.json()).ticket_id, 5);
+    assert.equal((await call({ 'x-admin-token': 'right-token-123456' }, 'abc')).status, 400);
+  });
+});
+
+test('ticket errors map to their HTTP status; failed action is 502', async () => {
+  const ticketService = {
+    approve: async () => { throw Object.assign(new Error('ticket 5 is rejected, not open'), { status: 409 }); },
+    reject: async () => ({ ticket_id: 5, status: 'open', result: { ok: false } }),
+  };
+  await withServer({ webhook: { route: () => {} }, ticketService, adminToken: 't'.repeat(16) }, async (base) => {
+    const headers = { 'x-admin-token': 't'.repeat(16) };
+    const res = await fetch(`${base}/api/tickets/5/approve`, { method: 'POST', headers });
+    assert.equal(res.status, 409);
+    assert.match((await res.json()).error, /not open/);
+    assert.equal((await fetch(`${base}/api/tickets/5/reject`, { method: 'POST', headers })).status, 502);
+  });
+});
+
 test('health returns 503 when the database check fails', async () => {
   const webhook = { route: () => {} };
   await withServer({ webhook, checkHealth: async () => { throw new Error('down'); } }, async (base) => {
