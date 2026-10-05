@@ -1,0 +1,38 @@
+[
+  {
+    "kind": "incident",
+    "title": "INC-1012: service-a memory leak from unbounded session cache",
+    "content": "HighMemory fired for service-a: RSS grew from 80MB to 410MB over 40 minutes. Shortly after, the error rate rose to 30% as requests timed out during long GC pauses. Root cause: a session cache with no eviction. Restarting the pod brought memory back to 70MB and errors to zero within 20 seconds. Fix shipped later: cache size limit.",
+    "recommended_action": "restart_pod"
+  },
+  {
+    "kind": "incident",
+    "title": "INC-1027: service-b 5xx spike after release 2.3.0",
+    "content": "HighErrorRate fired for service-b four minutes after release 2.3.0. 70% of requests failed with a null reference error in the order handler. Memory and traffic were normal. A restart was tried and did not help. Rolling back to 2.2.4 (approved by the on-call engineer) fixed it immediately.",
+    "recommended_action": "rollback_deploy"
+  },
+  {
+    "kind": "incident",
+    "title": "INC-1033: service-a latency during marketing campaign",
+    "content": "HighLatency fired for service-a: p95 rose to 2.8s while request rate tripled during an email campaign. Error rate stayed under 1%, memory normal, CPU at 100%. Scaling from 2 to 5 replicas brought p95 back under 300ms within a minute.",
+    "recommended_action": "scale_up"
+  },
+  {
+    "kind": "incident",
+    "title": "INC-1041: payments database outage caused errors in service-b",
+    "content": "HighErrorRate fired for service-b with 85% of requests failing on connection timeouts to the payments database, which was down for maintenance by another team. The agent's restart made no difference. Escalated to the database team; errors stopped when the database came back.",
+    "recommended_action": "escalate"
+  },
+  {
+    "kind": "incident",
+    "title": "INC-1048: OOM crash loop on service-a after restart",
+    "content": "service-a was OOMKilled, restarted, and was OOMKilled again 6 minutes later, three times within an hour. Health checks flapped. Restarts only bought minutes each time. Root cause: memory limit set too low after a new image doubled baseline usage. Escalated; fixed by raising the limit.",
+    "recommended_action": "escalate"
+  },
+  {
+    "kind": "incident",
+    "title": "INC-1055: feature flag typo broke service-b checkout",
+    "content": "HighErrorRate fired for service-b: 100% of checkout requests returned 500 with 'invalid flag value'. A config change two minutes earlier had a typo in a feature flag. Memory and traffic were normal. Escalated; reverting the config fixed it. A restart would have reloaded the same bad config.",
+    "recommended_action": "escalate"
+  }
+]

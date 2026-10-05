@@ -1,0 +1,12 @@
+{
+  "name": "scripts",
+  "private": true,
+  "type": "module",
+  "description": "Host-side helper scripts. No dependencies: Node 20.12+ built-ins only.",
+  "engines": {
+    "node": ">=20.12"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

@@ -72,6 +72,25 @@ services:
     depends_on:
       - alertmanager
 
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg16
+    restart: unless-stopped
+    # Must match DATABASE_URL in .env. No host port is published: the agent reaches it
+    # on the compose network and scripts/seed-db.js uses `docker compose exec`.
+    environment:
+      POSTGRES_USER: agent
+      POSTGRES_PASSWORD: agent
+      POSTGRES_DB: agent
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U agent -d agent']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
   alertmanager:
     image: prom/alertmanager:v0.34.1
     restart: unless-stopped
@@ -86,3 +105,6 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+
+volumes:
+  pgdata:
