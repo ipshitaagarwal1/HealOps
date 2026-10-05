@@ -1,0 +1,40 @@
+# Every alert keeps a `service` label: the agent uses it to decide what to act on.
+# The demo services set `service` on all their metrics (prom-client default labels).
+groups:
+  - name: demo-services
+    rules:
+      # 30s window (not 1m) so the demo alert fires in roughly 30s. A longer window
+      # is less noisy in production but slower to detect.
+      - alert: HighErrorRate
+        expr: |
+          sum by (service) (rate(http_requests_total{job="demo", status=~"5.."}[30s]))
+            /
+          sum by (service) (rate(http_requests_total{job="demo"}[30s]))
+            > 0.5
+        for: 15s
+        labels:
+          severity: critical
+        annotations:
+          summary: '{{ $labels.service }} 5xx ratio is {{ $value | humanizePercentage }}'
+          description: 'More than 50% of requests to {{ $labels.service }} returned 5xx over the last 30s.'
+
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum by (service, le) (rate(http_request_duration_seconds_bucket{job="demo"}[1m]))
+          ) > 1
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.service }} p95 latency is {{ $value | humanizeDuration }}'
+          description: 'p95 latency of {{ $labels.service }} has been above 1s over the last 1m.'
+
+      - alert: HighMemory
+        expr: max by (service) (process_resident_memory_bytes{job="demo"}) > 300 * 1024 * 1024
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.service }} resident memory is {{ $value | humanize1024 }}B'
+          description: 'Resident memory of {{ $labels.service }} has been above 300MB for 30s.'

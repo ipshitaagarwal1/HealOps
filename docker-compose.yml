@@ -1,0 +1,88 @@
+name: self-healing-agent
+
+# Shared settings for the two demo service containers.
+# ADMIN_TOKEN comes from .env (Compose reads it for variable substitution). Only the
+# token is passed in; the API keys never reach these containers.
+x-demo: &demo
+  build: ./services/demo
+  restart: unless-stopped
+  mem_limit: 512m
+  healthcheck:
+    test: ['CMD', 'wget', '-qO-', 'http://localhost:8080/health']
+    interval: 5s
+    timeout: 3s
+    retries: 3
+    start_period: 10s
+
+services:
+  service-a:
+    <<: *demo
+    environment:
+      SERVICE_NAME: service-a
+      PORT: '8080'
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?ADMIN_TOKEN must be set in .env}
+    ports:
+      - '8081:8080'
+
+  service-b:
+    <<: *demo
+    environment:
+      SERVICE_NAME: service-b
+      PORT: '8080'
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?ADMIN_TOKEN must be set in .env}
+    ports:
+      - '8082:8080'
+
+  loadgen:
+    build: ./services/demo
+    command: ['node', 'src/load.js']
+    restart: unless-stopped
+    environment:
+      LOAD_TARGETS: http://service-a:8080/,http://service-b:8080/
+      LOAD_INTERVAL_MS: '100'
+    healthcheck:
+      # Healthy while the load loop keeps writing its heartbeat file.
+      test: ['CMD', 'node', '-e', "const t=+require('fs').readFileSync('/tmp/loadgen-heartbeat','utf8');process.exit(Date.now()-t<10000?0:1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      service-a:
+        condition: service_started
+      service-b:
+        condition: service_started
+
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=1d
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus:/etc/prometheus:ro
+    ports:
+      - '9090:9090'
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:9090/-/healthy']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    depends_on:
+      - alertmanager
+
+  alertmanager:
+    image: prom/alertmanager:v0.34.1
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+    volumes:
+      - ./alertmanager:/etc/alertmanager:ro
+    ports:
+      - '9093:9093'
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:9093/-/healthy']
+      interval: 10s
+      timeout: 3s
+      retries: 3
