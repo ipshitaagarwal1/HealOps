@@ -1,0 +1,19 @@
+{
+  "name": "self-healing-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Incident response agent: webhook, RAG, diagnosis, guardrail, act, audit",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "5.2.1",
+    "pg": "8.23.1"
+  }
+}
