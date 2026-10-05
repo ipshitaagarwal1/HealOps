@@ -36,7 +36,8 @@ export function parseAlert(alert) {
   };
 }
 
-export function createWebhookHandler({ store, audit, logger, now = () => new Date() }) {
+// pipeline is optional so the webhook can be tested on its own.
+export function createWebhookHandler({ store, audit, logger, pipeline = null, now = () => new Date() }) {
   const pending = new Set();
 
   async function onFiring(a, raw) {
@@ -59,6 +60,7 @@ export function createWebhookHandler({ store, audit, logger, now = () => new Dat
       fingerprint: a.fingerprint, fired_at: a.startsAt,
     }, performance.now() - started);
     log.info('incident received', { alertname: a.alertname, service: a.service, fingerprint: a.fingerprint });
+    if (pipeline) await pipeline.run({ id: result.id, service: a.service, alertname: a.alertname, alert: raw });
     return result.id;
   }
 

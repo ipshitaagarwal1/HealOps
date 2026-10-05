@@ -31,6 +31,12 @@
   },
   {
     "kind": "incident",
+    "title": "INC-1061: service-a errors from a poisoned connection pool",
+    "content": "HighErrorRate fired for service-a: 90% of requests returned 500 after a brief network blip. No deploy or config change that day, dependencies healthy, memory normal. Connections in the pool were stuck in a broken state and never recycled. Restarting the pod rebuilt the pool and errors dropped to zero within 15 seconds.",
+    "recommended_action": "restart_pod"
+  },
+  {
+    "kind": "incident",
     "title": "INC-1055: feature flag typo broke service-b checkout",
     "content": "HighErrorRate fired for service-b: 100% of checkout requests returned 500 with 'invalid flag value'. A config change two minutes earlier had a typo in a feature flag. Memory and traffic were normal. Escalated; reverting the config fixed it. A restart would have reloaded the same bad config.",
     "recommended_action": "escalate"

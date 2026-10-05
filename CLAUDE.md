@@ -16,7 +16,8 @@ Full spec: `docs/SPEC.md`. Build order: `docs/BUILD_PLAN.md`. Read both before w
 - Postgres 16 + pgvector extension
 - Prometheus + Alertmanager
 - Embeddings: Google Gemini embedding API (768-dim output)
-- Diagnosis LLM: Groq (Llama model), OpenAI-compatible chat completions API
+- Diagnosis LLM: Groq (`openai/gpt-oss-120b`), OpenAI-compatible chat completions API.
+  Llama chat models are not available on this Groq account (404), so gpt-oss was chosen.
 - Docker Compose for everything
 - Tests: Node built-in test runner (`node --test`)
 
