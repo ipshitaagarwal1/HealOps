@@ -13,8 +13,9 @@ One Express app, two containers (`SERVICE_NAME=service-a|service-b`).
   `http_requests_total{service,status}`, `http_request_duration_seconds` histogram,
   `process_resident_memory_bytes` (default metrics).
 - `GET /health` returns 200 unless the service is in `crash` mode.
-- `POST /admin/fault` body `{ "mode": "error"|"latency"|"memory"|"none", "rate": 0.0-1.0 }`
-  Requires header `x-admin-token`.
+- `POST /admin/fault` body `{ "mode": "error"|"latency"|"memory"|"crash"|"none", "rate": 0.0-1.0 }`
+  Requires header `x-admin-token`. `crash` makes `/health` return 503 and `GET /` return
+  500 (the process stays up so it can be reset); `/admin/restart` clears it.
 - `POST /admin/restart` resets fault state to `none`, clears leaked memory, returns
   `{ restarted: true, at }`. Requires `x-admin-token`. This simulates a pod restart.
 - `POST /admin/scale` accepts `{ replicas }`, records it, and halves latency fault
@@ -25,7 +26,8 @@ One Express app, two containers (`SERVICE_NAME=service-a|service-b`).
 ## 3. Prometheus + Alertmanager
 - `scrape_interval: 5s`, `evaluation_interval: 5s`.
 - Alert rules (`prometheus/alert.rules.yml`):
-  - `HighErrorRate`: 5xx ratio over 1m > 0.5, `for: 15s`, severity critical
+  - `HighErrorRate`: 5xx ratio over 30s > 0.5, `for: 15s`, severity critical
+    (30s window instead of 1m so the alert fires in roughly 30s for the demo)
   - `HighLatency`: p95 latency over 1m > 1s, `for: 30s`, severity warning
   - `HighMemory`: resident memory > 300MB, `for: 30s`, severity warning
   - Labels must include `service` so the agent knows what to act on.
@@ -108,7 +110,11 @@ Modules: `server.js`, `config.js`, `db.js`, `logger.js`, `webhook.js`, `rag.js`,
    same fingerprint is still open. For `status: resolved`: mark the open incident
    resolved and set `resolved_at`.
 2. **Retrieve**: build a query string from alertname, service, labels, annotations.
-   Embed it (Gemini, 768 dims, query task type; documents use the document task type).
+   Embed it with Gemini (`GEMINI_EMBED_MODEL`, `output_dimensionality: 768`).
+   `gemini-embedding-2` has no `task_type` parameter; the task goes in the text:
+   queries are embedded as `task: search result | query: {text}`, documents (seed
+   script) as `title: {title} | text: {content}`. Vectors from older embedding models
+   are not compatible, so changing the model means re-running the seed.
    Top 3 by cosine similarity; drop results below `RAG_MIN_SIMILARITY`.
 3. **Diagnose**: call Groq with a system prompt that makes the model an SRE. It must
    return JSON only:
