@@ -6,6 +6,7 @@ import { createEvents } from './events.js';
 import { createIncidentStore } from './incidents.js';
 import { createLogger } from './logger.js';
 import { createDiagnoser } from './diagnose.js';
+import { loadRecentActions } from './guardrail.js';
 import { createPipeline } from './pipeline.js';
 import { createRetriever } from './rag.js';
 import { createTicketStore } from './tickets.js';
@@ -20,6 +21,8 @@ const store = createIncidentStore(pool);
 const pipeline = createPipeline({
   retrieve: createRetriever({ config, pool }),
   diagnose: createDiagnoser({ config }),
+  loadHistory: (service) => loadRecentActions(pool, service),
+  config,
   store,
   tickets: createTicketStore(pool),
   audit,
