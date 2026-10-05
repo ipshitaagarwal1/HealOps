@@ -66,6 +66,10 @@ const SCHEMA = {
 export function loadConfig(env) {
   const config = { logLevel: (env.LOG_LEVEL || 'info').toLowerCase() };
   const errors = [];
+  // Optional: the query embedding is a small call, so it gets a shorter default timeout.
+  const embedTimeout = num(100, 120000, { integer: true })(env.EMBED_TIMEOUT_MS || '5000');
+  if (embedTimeout.error) errors.push(`EMBED_TIMEOUT_MS ${embedTimeout.error}`);
+  else config.embedTimeoutMs = embedTimeout.value;
   for (const [name, [key, parse]] of Object.entries(SCHEMA)) {
     const { value, error } = parse(env[name]);
     if (error) errors.push(`${name} ${error}`);

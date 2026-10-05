@@ -5,6 +5,10 @@ import { createPool, pingDb } from './db.js';
 import { createEvents } from './events.js';
 import { createIncidentStore } from './incidents.js';
 import { createLogger } from './logger.js';
+import { createDiagnoser } from './diagnose.js';
+import { createPipeline } from './pipeline.js';
+import { createRetriever } from './rag.js';
+import { createTicketStore } from './tickets.js';
 import { createWebhookHandler } from './webhook.js';
 
 const config = loadConfigOrExit();
@@ -13,7 +17,15 @@ const pool = createPool(config.databaseUrl, logger);
 const events = createEvents();
 const audit = createAudit({ pool, events, logger });
 const store = createIncidentStore(pool);
-const webhook = createWebhookHandler({ store, audit, logger });
+const pipeline = createPipeline({
+  retrieve: createRetriever({ config, pool }),
+  diagnose: createDiagnoser({ config }),
+  store,
+  tickets: createTicketStore(pool),
+  audit,
+  logger,
+});
+const webhook = createWebhookHandler({ store, audit, logger, pipeline });
 
 const app = createApp({ webhook, checkHealth: () => pingDb(pool), logger });
 const server = app.listen(config.port, () => {

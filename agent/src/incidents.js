@@ -17,6 +17,22 @@ UPDATE incidents SET status = 'resolved', resolved_at = $2
 WHERE fingerprint = $1 AND resolved_at IS NULL
 RETURNING id, fired_at`;
 
+const UPDATABLE = ['retrieved', 'diagnosis', 'guardrail', 'action_result', 'status', 'decided_at', 'acted_at'];
+const JSON_COLUMNS = new Set(['retrieved', 'diagnosis', 'guardrail', 'action_result']);
+
+// Builds the UPDATE for a whitelisted set of columns. A status change never overwrites
+// 'resolved': the alert may clear while the pipeline is still running.
+export function buildUpdate(id, fields) {
+  const cols = Object.keys(fields);
+  const unknown = cols.filter((c) => !UPDATABLE.includes(c));
+  if (unknown.length || !cols.length) throw new Error(`bad incident update columns: ${unknown.join(',') || 'none'}`);
+  const sets = cols.map((c, i) => (c === 'status'
+    ? `status = CASE WHEN resolved_at IS NULL THEN $${i + 2} ELSE status END`
+    : `${c} = $${i + 2}`));
+  const values = cols.map((c) => (JSON_COLUMNS.has(c) ? JSON.stringify(fields[c]) : fields[c]));
+  return { text: `UPDATE incidents SET ${sets.join(', ')} WHERE id = $1`, values: [id, ...values] };
+}
+
 export function createIncidentStore(pool) {
   return {
     // Returns { created: true, id } or { created: false, id: <open incident id> }.
@@ -26,6 +42,11 @@ export function createIncidentStore(pool) {
       if (rows.length) return { created: true, id: rows[0].id };
       const open = await pool.query(FIND_OPEN_SQL, [fingerprint]);
       return { created: false, id: open.rows[0]?.id ?? null };
+    },
+
+    async update(id, fields) {
+      const { text, values } = buildUpdate(id, fields);
+      await pool.query(text, values);
     },
 
     // Returns { id, firedAt } of the incident it resolved, or null if none was open.
