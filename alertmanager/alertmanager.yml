@@ -1,0 +1,17 @@
+# Demo timings are deliberately short so an alert reaches the agent within seconds.
+# Production tradeoff: typical values are group_wait 30s, group_interval 5m,
+# repeat_interval 4h. Longer waits batch related alerts and cut notification noise;
+# shorter ones (as here) react faster but can page or trigger automation repeatedly.
+route:
+  receiver: agent-webhook
+  group_by: ['alertname', 'service']
+  group_wait: 5s
+  group_interval: 30s
+  repeat_interval: 5m
+
+receivers:
+  - name: agent-webhook
+    webhook_configs:
+      # The agent is added in Phase 3. Until then deliveries fail and Alertmanager retries.
+      - url: http://agent:3000/webhook/alertmanager
+        send_resolved: true
