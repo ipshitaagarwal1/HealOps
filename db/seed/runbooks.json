@@ -1,0 +1,38 @@
+[
+  {
+    "kind": "runbook",
+    "title": "Memory leak: restart the service",
+    "content": "Symptoms: resident memory (RSS) climbs steadily and does not come back down after traffic drops. As the process nears its memory limit, garbage collection pauses grow, requests time out, and the 5xx error rate rises. Common causes are unbounded in-process caches, listeners that are never removed, and buffers held across requests. Remediation: restart the affected pod to release the memory; service recovers within seconds. Afterwards, open a follow-up to find the leak with a heap snapshot. If memory climbs again within the hour, the leak is still active: escalate instead of restarting repeatedly.",
+    "recommended_action": "restart_pod"
+  },
+  {
+    "kind": "runbook",
+    "title": "Error spike after a deploy: roll back",
+    "content": "Symptoms: the 5xx error rate jumps sharply within minutes of a new version going out, while traffic volume is normal and dependencies are healthy. Errors are usually consistent (same endpoint, same exception) rather than random. Remediation: roll back to the previous release. Rollback is high risk because it can undo schema or config changes shipped with the release, so a human must approve it. Restarting does not help: the bad code comes back on restart.",
+    "recommended_action": "rollback_deploy"
+  },
+  {
+    "kind": "runbook",
+    "title": "Traffic surge causing high latency: scale up",
+    "content": "Symptoms: p95 latency rises above 1s while the request rate is well above normal. Error rate stays low at first, memory per instance is normal, and CPU is saturated. Typical triggers are marketing campaigns, batch jobs, or a retry storm from clients. Remediation: scale up the number of replicas so load is spread out; latency should drop within a minute. Restarting does not help and briefly makes it worse by removing capacity.",
+    "recommended_action": "scale_up"
+  },
+  {
+    "kind": "runbook",
+    "title": "Downstream dependency outage: escalate",
+    "content": "Symptoms: high error rate or timeouts, and the errors are connection refused, upstream 503, or timeouts calling a database, cache, or third-party API. The service itself is healthy: memory and CPU are normal and it has not been deployed recently. Remediation: the problem is outside this service, so restarting or scaling it will not help and may add load to the struggling dependency. Escalate to a human and page the owning team of the dependency.",
+    "recommended_action": "escalate"
+  },
+  {
+    "kind": "runbook",
+    "title": "Configuration error: escalate",
+    "content": "Symptoms: errors start right after a configuration or feature flag change, often 100% failure on specific endpoints, with messages about missing keys, invalid values, or failed parsing. Memory and traffic are normal. Remediation: a human must find and revert the bad configuration. Restarting reloads the same broken config, and scaling multiplies it. Escalate with the time of the error onset so it can be matched to the config change log.",
+    "recommended_action": "escalate"
+  },
+  {
+    "kind": "runbook",
+    "title": "OOM crash loop: restart once, escalate if repeated",
+    "content": "Symptoms: the container is killed for exceeding its memory limit (OOMKilled), health checks fail, and the service goes in and out of availability. Remediation: one restart is safe and often clears a one-off spike. If the service has already been restarted for this in the last hour, or memory rises again right after restart, the problem is structural (limit too low or a fast leak): escalate to a human rather than restarting in a loop.",
+    "recommended_action": "restart_pod"
+  }
+]

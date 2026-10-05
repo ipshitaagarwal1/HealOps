@@ -35,7 +35,9 @@ docs/             SPEC.md, BUILD_PLAN.md
 - `docker compose up -d --build`   start everything
 - `docker compose logs -f agent`   watch the agent
 - `npm test --prefix agent`        unit tests
-- `node scripts/seed-db.js`        embed + load runbooks
+- `node scripts/seed-db.js`        embed + load runbooks (idempotent; `--force` re-embeds)
+- `node scripts/query-knowledge.js "text"`   show what RAG retrieves for a query
+- `npm test --prefix scripts`      seed/script unit tests
 - `./scripts/inject-fault.sh service-a error`   break a service on purpose
 
 ## Rules for working in this repo
