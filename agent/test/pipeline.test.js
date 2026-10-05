@@ -14,11 +14,13 @@ const config = {
 };
 const NOW = new Date('2026-10-06T12:00:00Z');
 
-function setup({ retrieve, diagnose, history = [], updateFails = false } = {}) {
+function setup({ retrieve, diagnose, history = [], updateFails = false, execute } = {}) {
   const updates = [];
   const audits = [];
   const tickets = [];
+  const runs = [];
   const deps = {
+    execute: execute ?? (async (a) => { runs.push(a); return { action: a.action, service: a.service, approved_by: a.approvedBy, ok: true, duration_ms: 4 }; }),
     retrieve: retrieve ?? (async () => ({ query: 'q', candidates: [hit], kept: [hit], error: null })),
     diagnose: diagnose ?? (async () => ({ diagnosis: good, attempts: 1 })),
     loadHistory: async () => history,
@@ -29,19 +31,53 @@ function setup({ retrieve, diagnose, history = [], updateFails = false } = {}) {
     audit: async (id, step, detail) => audits.push({ id, step, detail }),
     logger: createLogger({}, { write: () => {} }),
   };
-  return { pipeline: createPipeline(deps), updates, audits, tickets };
+  return { pipeline: createPipeline(deps), updates, audits, tickets, runs };
 }
 
-test('happy path: retrieve, diagnose and guardrail are stored and audited, no ticket', async () => {
-  const { pipeline, updates, audits, tickets } = setup();
+test('happy path: retrieve, diagnose, guardrail, act; incident acted, no ticket', async () => {
+  const { pipeline, updates, audits, tickets, runs } = setup();
   await pipeline.run(incident);
-  assert.deepEqual(audits.map((a) => a.step), ['retrieve', 'diagnose', 'guardrail']);
+  assert.deepEqual(audits.map((a) => a.step), ['retrieve', 'diagnose', 'guardrail', 'act']);
   assert.deepEqual(updates[0].retrieved, [{ id: 7, kind: 'runbook', title: 'Memory leak', similarity: 0.8, recommended_action: 'restart_pod' }]);
   assert.equal(updates[1].status, 'diagnosed');
   assert.deepEqual(updates[1].diagnosis, good);
   assert.equal(updates[2].guardrail.decision, 'execute');
   assert.equal(updates[2].decided_at, NOW);
+  assert.deepEqual(runs, [{ action: 'restart_pod', service: 'service-a', approvedBy: 'agent' }]);
+  assert.equal(updates[3].status, 'acted');
+  assert.ok(updates[3].acted_at instanceof Date);
   assert.equal(tickets.length, 0);
+});
+
+test('failed action opens a ticket with reason action_failed', async () => {
+  const execute = async (a) => ({ action: a.action, ok: false, error: 'POST /admin/restart timed out after 5000ms', duration_ms: 5000 });
+  const { pipeline, updates, audits, tickets } = setup({ execute });
+  await pipeline.run(incident);
+  assert.deepEqual(tickets[0].reasons, ['action_failed: POST /admin/restart timed out after 5000ms']);
+  assert.equal(updates.at(-1).status, 'ticketed');
+  assert.ok(!updates.some((u) => u.status === 'acted'));
+  assert.deepEqual(audits.map((a) => a.step), ['retrieve', 'diagnose', 'guardrail', 'act', 'ticket']);
+});
+
+test('ticket decisions never call execute', async () => {
+  const diagnose = async () => ({ diagnosis: { ...good, confidence: 0.5 }, attempts: 1 });
+  const { pipeline, runs, tickets } = setup({ diagnose });
+  await pipeline.run(incident);
+  assert.equal(runs.length, 0);
+  assert.match(tickets[0].reasons[0], /^low_confidence:/);
+});
+
+test('two incidents for one service: second sees the first action and hits cooldown', async () => {
+  const history = [];
+  const execute = async (a) => {
+    await new Promise((r) => setTimeout(r, 20)); // slow action: the race window
+    history.push({ service: a.service, action: a.action, approved_by: a.approvedBy, at: NOW });
+    return { action: a.action, ok: true, duration_ms: 20 };
+  };
+  const { pipeline, tickets } = setup({ execute, history });
+  await Promise.all([pipeline.run({ ...incident, id: 'i1' }), pipeline.run({ ...incident, id: 'i2' })]);
+  assert.equal(history.length, 1, 'only one action may run');
+  assert.match(tickets[0].reasons[0], /^cooldown_active:/);
 });
 
 test('llm_error: guardrail tickets the escalation and the ticket keeps the llm_error reason', async () => {

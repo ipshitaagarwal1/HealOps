@@ -62,6 +62,26 @@ const SCHEMA = {
   ACTION_TIMEOUT_MS: ['actionTimeoutMs', num(100, 120000, { integer: true })],
 };
 
+// "service-a=http://service-a:8080,service-b=http://service-b:8080" -> { name: baseUrl }.
+// The allowlist of services the agent may act on; alert labels never pick a host directly.
+export const DEFAULT_ACTION_TARGETS = 'service-a=http://service-a:8080,service-b=http://service-b:8080';
+
+export function parseActionTargets(value) {
+  const targets = {};
+  for (const pair of value.split(',').map((s) => s.trim()).filter(Boolean)) {
+    const [name, url, extra] = pair.split('=');
+    if (!name || !url || extra !== undefined) return { error: 'must look like name=http://host:port,...' };
+    try {
+      if (!['http:', 'https:'].includes(new URL(url).protocol)) throw new Error();
+    } catch {
+      return { error: `has an invalid URL for ${name}` };
+    }
+    targets[name] = url.replace(/\/+$/, '');
+  }
+  if (!Object.keys(targets).length) return { error: 'must list at least one service' };
+  return { value: Object.freeze(targets) };
+}
+
 // Returns { config, errors }. Error messages name the variable, never its value.
 export function loadConfig(env) {
   const config = { logLevel: (env.LOG_LEVEL || 'info').toLowerCase() };
@@ -70,6 +90,9 @@ export function loadConfig(env) {
   const embedTimeout = num(100, 120000, { integer: true })(env.EMBED_TIMEOUT_MS || '5000');
   if (embedTimeout.error) errors.push(`EMBED_TIMEOUT_MS ${embedTimeout.error}`);
   else config.embedTimeoutMs = embedTimeout.value;
+  const targets = parseActionTargets(env.ACTION_TARGETS || DEFAULT_ACTION_TARGETS);
+  if (targets.error) errors.push(`ACTION_TARGETS ${targets.error}`);
+  else config.actionTargets = targets.value;
   for (const [name, [key, parse]] of Object.entries(SCHEMA)) {
     const { value, error } = parse(env[name]);
     if (error) errors.push(`${name} ${error}`);

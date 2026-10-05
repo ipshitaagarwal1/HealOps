@@ -45,6 +45,14 @@ test('DRY_RUN accepts true/false in any case', () => {
   assert.equal(loadConfig({ ...valid, DRY_RUN: 'TRUE' }).config.dryRun, true);
 });
 
+test('ACTION_TARGETS defaults to the two demo services and validates custom values', () => {
+  assert.deepEqual(loadConfig(valid).config.actionTargets,
+    { 'service-a': 'http://service-a:8080', 'service-b': 'http://service-b:8080' });
+  assert.deepEqual(loadConfig({ ...valid, ACTION_TARGETS: 'x=http://x:1/' }).config.actionTargets, { x: 'http://x:1' });
+  assert.equal(loadConfig({ ...valid, ACTION_TARGETS: 'x=ftp://x' }).errors.length, 1);
+  assert.equal(loadConfig({ ...valid, ACTION_TARGETS: 'nonsense' }).errors.length, 1);
+});
+
 test('redact removes secrets', () => {
   const safe = JSON.stringify(redact(loadConfig(valid).config));
   for (const secret of ['g-key', 'q-key', 'a-long-random-admin-token', 'agent:agent']) {
