@@ -72,6 +72,25 @@ services:
     depends_on:
       - alertmanager
 
+  agent:
+    build: ./agent
+    restart: unless-stopped
+    # The agent needs the API keys, so it (and only it) gets the whole .env.
+    env_file: .env
+    ports:
+      # Localhost only: the webhook is unauthenticated (Alertmanager reaches it over the
+      # compose network), so it must not be reachable from the LAN.
+      - '127.0.0.1:3000:3000'
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/health']
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   postgres:
     image: pgvector/pgvector:0.8.7-pg16
     restart: unless-stopped

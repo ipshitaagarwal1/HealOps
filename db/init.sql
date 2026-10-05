@@ -34,6 +34,9 @@ CREATE TABLE incidents (
   resolved_at TIMESTAMPTZ
 );
 CREATE INDEX ON incidents (fingerprint);
+-- At most one open incident per alert fingerprint: makes webhook dedupe atomic.
+CREATE UNIQUE INDEX IF NOT EXISTS incidents_open_fingerprint_uniq
+  ON incidents (fingerprint) WHERE resolved_at IS NULL;
 CREATE INDEX ON incidents (received_at DESC);
 
 CREATE TABLE tickets (
