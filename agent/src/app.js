@@ -19,14 +19,15 @@ const ticketId = (req) => {
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public', import.meta.url));
 
-// dashboard (router) and metrics are optional so tests can build a minimal app.
-export function createApp({ webhook, checkHealth, logger, ticketService, adminToken, dashboard, metrics }) {
+// dashboard, health and metrics are optional so tests can build a minimal app.
+export function createApp({ webhook, checkHealth, logger, ticketService, adminToken, dashboard, health, metrics }) {
   const app = express();
   app.disable('x-powered-by');
   const admin = requireAdmin(adminToken);
 
   app.use(express.static(PUBLIC_DIR, { index: 'index.html' }));
   if (dashboard) app.use(dashboard);
+  if (health) app.use(express.json({ limit: '10kb' }), health);
   if (metrics) {
     app.get('/metrics', async (req, res) => {
       res.set('Content-Type', metrics.registry.contentType);

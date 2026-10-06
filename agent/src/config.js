@@ -90,6 +90,11 @@ export function loadConfig(env) {
   const embedTimeout = num(100, 120000, { integer: true })(env.EMBED_TIMEOUT_MS || '5000');
   if (embedTimeout.error) errors.push(`EMBED_TIMEOUT_MS ${embedTimeout.error}`);
   else config.embedTimeoutMs = embedTimeout.value;
+  // Optional: where the dashboard's server-side Prometheus proxy queries. The browser
+  // never talks to Prometheus directly.
+  const prometheusUrl = url(env.PROMETHEUS_URL || 'http://prometheus:9090');
+  if (prometheusUrl.error) errors.push(`PROMETHEUS_URL ${prometheusUrl.error}`);
+  else config.prometheusUrl = prometheusUrl.value.replace(/\/+$/, '');
   const targets = parseActionTargets(env.ACTION_TARGETS || DEFAULT_ACTION_TARGETS);
   if (targets.error) errors.push(`ACTION_TARGETS ${targets.error}`);
   else config.actionTargets = targets.value;
