@@ -1,0 +1,9 @@
+# Used by builds whose context is the repo root (scripts/Dockerfile). Per-service
+# builds (agent/, services/demo/) have their own build context and .dockerignore.
+.git
+**/node_modules
+pgdata
+.env
+*.log
+docs/*.png
+.DS_Store

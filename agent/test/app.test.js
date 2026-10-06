@@ -74,6 +74,18 @@ test('ticket errors map to their HTTP status; failed action is 502', async () =>
   });
 });
 
+test('ticket endpoints rate-limit after 10 requests in the window', async () => {
+  const ticketService = { approve: async (id) => ({ ticket_id: id, status: 'approved', result: { ok: true } }) };
+  await withServer({ webhook: { route: () => {} }, ticketService, adminToken: 'right-token-123456' }, async (base) => {
+    const headers = { 'x-admin-token': 'right-token-123456' };
+    const call = () => fetch(`${base}/api/tickets/5/approve`, { method: 'POST', headers });
+    for (let i = 0; i < 10; i += 1) assert.equal((await call()).status, 200);
+    const limited = await call();
+    assert.equal(limited.status, 429);
+    assert.ok(limited.headers.get('retry-after'));
+  });
+});
+
 test('health returns 503 when the database check fails', async () => {
   const webhook = { route: () => {} };
   await withServer({ webhook, checkHealth: async () => { throw new Error('down'); } }, async (base) => {

@@ -2,6 +2,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
+import { createRateLimiter } from './ratelimit.js';
 
 export function requireAdmin(adminToken) {
   const expected = Buffer.from(adminToken ?? '');
@@ -24,6 +25,9 @@ export function createApp({ webhook, checkHealth, logger, ticketService, adminTo
   const app = express();
   app.disable('x-powered-by');
   const admin = requireAdmin(adminToken);
+  // Same window as the demo-control panel's limiter (health.js): the dashboard is
+  // public, so a leaked or guessed token still can't be used to hammer the API.
+  const ticketLimiter = createRateLimiter({ windowMs: 10_000, max: 10 });
 
   app.use(express.static(PUBLIC_DIR, { index: 'index.html' }));
   if (dashboard) app.use(dashboard);
@@ -48,7 +52,7 @@ export function createApp({ webhook, checkHealth, logger, ticketService, adminTo
   });
 
   for (const op of ['approve', 'reject']) {
-    app.post(`/api/tickets/:id/${op}`, admin, async (req, res, next) => {
+    app.post(`/api/tickets/:id/${op}`, admin, ticketLimiter, async (req, res, next) => {
       const id = ticketId(req);
       if (!id) return res.status(400).json({ error: 'ticket id must be a positive integer' });
       try {

@@ -91,11 +91,25 @@ services:
       postgres:
         condition: service_healthy
 
+  # One-off: `docker compose run --rm seed` (add --force to re-embed everything). Not
+  # part of `up`: it's a tool container, not a long-running service.
+  seed:
+    build:
+      context: .
+      dockerfile: scripts/Dockerfile
+    profiles: ['tools']
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   postgres:
     image: pgvector/pgvector:0.8.7-pg16
     restart: unless-stopped
-    # Must match DATABASE_URL in .env. No host port is published: the agent reaches it
-    # on the compose network and scripts/seed-db.js uses `docker compose exec`.
+    # Must match DATABASE_URL in .env. No host port is published: reachable only on the
+    # compose network, from the agent, from `docker compose run --rm seed`, or from the
+    # host via `docker compose exec postgres psql ...` (what scripts/seed-db.js does
+    # when run directly on the host instead of through the seed container).
     environment:
       POSTGRES_USER: agent
       POSTGRES_PASSWORD: agent

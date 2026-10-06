@@ -41,6 +41,22 @@ test('example or short admin token is rejected', () => {
   assert.equal(loadConfig({ ...valid, ADMIN_TOKEN: 'short' }).errors.length, 1);
 });
 
+test('ADMIN_TOKEN needs 24+ characters when DEPLOY_ENV=production, 16+ otherwise', () => {
+  const token20 = 'twenty-char-token!!!';
+  assert.equal(token20.length, 20);
+  assert.deepEqual(loadConfig({ ...valid, ADMIN_TOKEN: token20 }).errors, []);
+  assert.deepEqual(loadConfig({ ...valid, ADMIN_TOKEN: token20, DEPLOY_ENV: 'production' }).errors,
+    ['ADMIN_TOKEN must be at least 24 characters']);
+  assert.deepEqual(loadConfig({ ...valid, ADMIN_TOKEN: token20, DEPLOY_ENV: 'PRODUCTION' }).errors,
+    ['ADMIN_TOKEN must be at least 24 characters']);
+  assert.deepEqual(loadConfig({ ...valid, ADMIN_TOKEN: 'a-long-random-admin-token', DEPLOY_ENV: 'production' }).errors, []);
+});
+
+test('DEPLOY_ENV defaults to development and is reported in config', () => {
+  assert.equal(loadConfig(valid).config.deployEnv, 'development');
+  assert.equal(loadConfig({ ...valid, DEPLOY_ENV: 'production' }).config.deployEnv, 'production');
+});
+
 test('DRY_RUN accepts true/false in any case', () => {
   assert.equal(loadConfig({ ...valid, DRY_RUN: 'TRUE' }).config.dryRun, true);
 });
