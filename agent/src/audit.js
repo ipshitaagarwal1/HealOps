@@ -8,10 +8,12 @@ INSERT INTO audit_log (incident_id, step, detail, duration_ms)
 VALUES ($1, $2, $3, $4)
 RETURNING id, at`;
 
-export function createAudit({ pool, events, logger }) {
+// metrics is optional; when given, every timed step feeds agent_stage_duration_seconds.
+export function createAudit({ pool, events, logger, metrics = null }) {
   return async function record(incidentId, step, detail = {}, durationMs = null) {
     if (!STEPS.includes(step)) throw new Error(`unknown audit step: ${step}`);
     const ms = durationMs == null ? null : Math.round(durationMs);
+    if (metrics && durationMs != null) metrics.observeStage(step, durationMs);
     const event = { incident_id: incidentId, step, detail, duration_ms: ms, at: new Date().toISOString() };
     try {
       // Stringify explicitly: pg would turn a JS array into a Postgres array, not jsonb.

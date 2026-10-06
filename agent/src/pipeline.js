@@ -31,7 +31,8 @@ export function createKeyedLock() {
 }
 
 export function createPipeline({
-  retrieve, diagnose, loadHistory, execute, config, store, tickets, audit, logger, now = () => new Date(),
+  retrieve, diagnose, loadHistory, execute, config, store, tickets, audit, logger,
+  metrics = null, now = () => new Date(),
 }) {
   const withServiceLock = createKeyedLock();
   async function openTicket(incident, diagnosis, reasons, log) {
@@ -55,6 +56,7 @@ export function createPipeline({
     const { result: verdict, at: decidedAt } = g.value;
     await store.update(incident.id, { guardrail: verdict, decided_at: decidedAt });
     await audit(incident.id, 'guardrail', { ...verdict, action: diagnosis.action, recent_actions: g.value.historyCount }, g.ms);
+    metrics?.countDecision(diagnosis.action, verdict.decision);
     log.info('guardrail decided', { decision: verdict.decision, action: diagnosis.action, reasons: verdict.reasons });
 
     if (verdict.decision === 'ticket') {

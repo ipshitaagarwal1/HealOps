@@ -1,5 +1,6 @@
 // Express routes. Built from injected dependencies so tests can run it without a DB.
 import { timingSafeEqual } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 
 export function requireAdmin(adminToken) {
@@ -16,10 +17,22 @@ const ticketId = (req) => {
   return Number.isInteger(id) && id > 0 ? id : null;
 };
 
-export function createApp({ webhook, checkHealth, logger, ticketService, adminToken }) {
+const PUBLIC_DIR = fileURLToPath(new URL('../public', import.meta.url));
+
+// dashboard (router) and metrics are optional so tests can build a minimal app.
+export function createApp({ webhook, checkHealth, logger, ticketService, adminToken, dashboard, metrics }) {
   const app = express();
   app.disable('x-powered-by');
   const admin = requireAdmin(adminToken);
+
+  app.use(express.static(PUBLIC_DIR, { index: 'index.html' }));
+  if (dashboard) app.use(dashboard);
+  if (metrics) {
+    app.get('/metrics', async (req, res) => {
+      res.set('Content-Type', metrics.registry.contentType);
+      res.send(await metrics.registry.metrics());
+    });
+  }
 
   app.post('/webhook/alertmanager', express.json({ limit: '1mb' }), webhook.route);
 

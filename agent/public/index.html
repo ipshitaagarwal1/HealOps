@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Self-Healing Agent</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%232f6fdf'/%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' stroke='white' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1b1f24; --muted: #5f6b7a; --line: #e3e7ec;
+    --accent: #2f6fdf; --ok: #1a7f4b; --ok-bg: #e5f4ec; --warn: #9a6400; --warn-bg: #fdf2dc;
+    --bad: #b42318; --bad-bg: #fdeceb; --info-bg: #e9f0fd; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1216; --panel: #171b21; --text: #e6e9ee; --muted: #94a0b0; --line: #262c35;
+      --accent: #6c9cff; --ok: #4cc38a; --ok-bg: #12291f; --warn: #e3b341; --warn-bg: #2e2510;
+      --bad: #ff7b72; --bad-bg: #331716; --info-bg: #15213a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 2; }
+  h1 { font-size: 17px; margin: 0; font-weight: 650; }
+  h2 { font-size: 13px; margin: 0 0 10px; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  main { padding: 16px 20px 40px; display: grid; gap: 16px; max-width: 1400px; margin: 0 auto; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+  .row { display: grid; gap: 16px; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+  @media (max-width: 900px) { .row { grid-template-columns: 1fr; } }
+  .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .live { color: var(--ok); background: var(--ok-bg); } .down { color: var(--bad); background: var(--bad-bg); }
+  input[type=password] { font: inherit; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); width: 190px; }
+  button { font: inherit; font-weight: 600; padding: 5px 11px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  button.approve { border-color: var(--ok); color: var(--ok); } button.reject { border-color: var(--bad); color: var(--bad); }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .tile { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .tile .label { color: var(--muted); font-size: 12px; }
+  .tile .value { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .tile .sub { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .feed { list-style: none; margin: 0; padding: 0; max-height: 420px; overflow: auto; }
+  .feed li { display: grid; grid-template-columns: 64px 74px 82px minmax(0, 1fr); gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+  .feed li.new { animation: flash 1.2s ease-out; }
+  @keyframes flash { from { background: var(--info-bg); } to { background: transparent; } }
+  .mono { font-family: var(--mono); font-size: 12px; } .muted { color: var(--muted); }
+  .step { font-weight: 650; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 5px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .t-ok { color: var(--ok); background: var(--ok-bg); } .t-warn { color: var(--warn); background: var(--warn-bg); }
+  .t-bad { color: var(--bad); background: var(--bad-bg); } .t-info { color: var(--accent); background: var(--info-bg); }
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+  tr.click { cursor: pointer; } tr.click:hover td { background: var(--bg); }
+  .reason { font-size: 12px; color: var(--muted); max-width: 420px; }
+  .empty { color: var(--muted); padding: 10px 0; }
+  dialog { width: min(900px, calc(100vw - 32px)); max-height: 85vh; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text); padding: 0; }
+  dialog::backdrop { background: rgba(0,0,0,.45); }
+  .dlg-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); }
+  .dlg-body { padding: 12px 16px; }
+  pre { margin: 4px 0 0; white-space: pre-wrap; word-break: break-word; font-family: var(--mono); font-size: 12px; background: var(--bg); padding: 8px; border-radius: 6px; }
+  .trail-item { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); padding: 8px 14px; border-radius: 8px; background: var(--text); color: var(--bg); font-weight: 600; opacity: 0; transition: opacity .2s; pointer-events: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Self-Healing Agent</h1>
+  <div class="controls">
+    <span id="conn" class="pill down">connecting</span>
+    <label class="muted" for="token">Admin token</label>
+    <input id="token" type="password" autocomplete="off" placeholder="needed to approve/reject">
+  </div>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>Latency, last <span id="window">0</span> incidents (median / p95)</h2>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <div class="row">
+    <section class="panel">
+      <h2>Live pipeline</h2>
+      <ul class="feed" id="feed"><li class="empty" id="feed-empty">Waiting for events. Inject a fault to see the pipeline run.</li></ul>
+    </section>
+    <section class="panel">
+      <h2>Open tickets</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>#</th><th>Service</th><th>Action</th><th>Conf.</th><th>Why a human is needed</th><th></th></tr></thead>
+        <tbody id="tickets"></tbody>
+      </table></div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <h2>Last 20 incidents <span class="muted" style="text-transform:none;letter-spacing:0">(click a row for the audit trail)</span></h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Fired</th><th>Service</th><th>Alert</th><th>Status</th><th>Diagnosis</th><th>Decision</th>
+        <th>Detect</th><th>Decide</th><th>Act</th><th>Recover</th></tr></thead>
+      <tbody id="incidents"></tbody>
+    </table></div>
+  </section>
+</main>
+
+<dialog id="detail">
+  <div class="dlg-head"><strong id="detail-title">Incident</strong><button id="detail-close">Close</button></div>
+  <div class="dlg-body" id="detail-body"></div>
+</dialog>
+<div id="toast"></div>
+
+<script>
+// All data goes through textContent: diagnosis text comes from an LLM and must never be
+// parsed as HTML.
+const $ = (id) => document.getElementById(id);
+function h(tag, props = {}, ...children) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v);
+  }
+  for (const c of children.flat()) if (c != null) el.append(c instanceof Node ? c : String(c));
+  return el;
+}
+const tag = (text, kind) => h('span', { class: `tag t-${kind}` }, text);
+const time = (d) => (d ? new Date(d).toLocaleTimeString([], { hour12: false }) : '');
+const secs = (s) => (s == null ? '–' : s < 10 ? `${s.toFixed(1)}s` : `${Math.round(s)}s`);
+const ms = (v) => (v == null ? '' : v < 1000 ? `${v}ms` : `${(v / 1000).toFixed(1)}s`);
+const short = (id) => (id ? id.slice(0, 8) : '');
+const conf = (c) => (c == null ? '–' : Number(c).toFixed(2));
+
+function toast(text) {
+  const t = $('toast'); t.textContent = text; t.style.opacity = 1;
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => { t.style.opacity = 0; }, 2500);
+}
+
+// Token lives only in this tab's sessionStorage (may be unavailable: guard every access).
+const token = $('token');
+try { token.value = sessionStorage.getItem('adminToken') || ''; } catch {}
+token.addEventListener('input', () => { try { sessionStorage.setItem('adminToken', token.value); } catch {} });
+
+async function getJSON(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+  return res.json();
+}
+
+const STATUS_KIND = { acted: 'ok', resolved: 'ok', ticketed: 'warn', failed: 'bad', diagnosed: 'info', received: 'info' };
+const LABELS = { detection_lag: ['Detection lag', 'alert fired → agent received'],
+  decision_time: ['Decision time', 'received → guardrail decided'],
+  time_to_action: ['Time to action', 'fired → action ran'],
+  time_to_recovery: ['Time to recovery', 'fired → alert resolved'] };
+
+function renderStats(data) {
+  $('window').textContent = data.window;
+  $('stats').replaceChildren(...Object.entries(LABELS).map(([key, [label, sub]]) => {
+    const s = data.stats[key];
+    return h('div', { class: 'tile' },
+      h('div', { class: 'label' }, label),
+      h('div', { class: 'value' }, s.n ? `${secs(s.median_s)} / ${secs(s.p95_s)}` : '–'),
+      h('div', { class: 'sub' }, `${sub} · n=${s.n}`));
+  }));
+}
+
+const known = new Map(); // incident id -> { service, alertname }
+
+function renderIncidents(rows) {
+  for (const r of rows) known.set(r.id, { service: r.service, alertname: r.alertname });
+  if (!rows.length) { $('incidents').replaceChildren(h('tr', {}, h('td', { colspan: 10, class: 'empty' }, 'No incidents yet.'))); return; }
+  $('incidents').replaceChildren(...rows.map((r) => h('tr', { class: 'click', onclick: () => showIncident(r.id) },
+    h('td', { class: 'mono' }, time(r.fired_at)),
+    h('td', {}, r.service),
+    h('td', {}, r.alertname),
+    h('td', {}, tag(r.status, STATUS_KIND[r.status] || 'info')),
+    h('td', {}, r.action ? `${r.action} @ ${conf(r.confidence)}` : '–'),
+    h('td', {}, r.decision ? tag(r.decision, r.decision === 'execute' ? 'ok' : 'warn') : '–'),
+    h('td', {}, secs(r.latency_s.detection_lag)),
+    h('td', {}, secs(r.latency_s.decision_time)),
+    h('td', {}, secs(r.latency_s.time_to_action)),
+    h('td', {}, secs(r.latency_s.time_to_recovery)))));
+}
+
+function renderTickets(rows) {
+  if (!rows.length) { $('tickets').replaceChildren(h('tr', {}, h('td', { colspan: 6, class: 'empty' }, 'No open tickets.'))); return; }
+  $('tickets').replaceChildren(...rows.map((t) => {
+    const runnable = t.recommended_action !== 'escalate';
+    return h('tr', {},
+      h('td', { class: 'mono' }, t.id),
+      h('td', {}, t.service, h('div', { class: 'muted' }, t.alertname || '')),
+      h('td', {}, t.recommended_action),
+      h('td', {}, conf(t.confidence)),
+      h('td', { class: 'reason' }, t.reason_for_escalation || ''),
+      h('td', { style: 'white-space:nowrap' },
+        h('button', { class: 'approve', title: runnable ? 'Run the recommended action' : 'escalate has nothing to run',
+          ...(runnable ? {} : { disabled: '' }), onclick: (e) => decide(t.id, 'approve', e.target) }, 'Approve'), ' ',
+        h('button', { class: 'reject', onclick: (e) => decide(t.id, 'reject', e.target) }, 'Reject')));
+  }));
+}
+
+async function decide(id, op, button) {
+  if (!token.value) { toast('Enter the admin token first'); token.focus(); return; }
+  button.disabled = true;
+  try {
+    const res = await fetch(`/api/tickets/${id}/${op}`, { method: 'POST', headers: { 'x-admin-token': token.value } });
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 401) toast('Wrong admin token');
+    else if (!res.ok) toast(body.error || (body.result && body.result.error) || `Failed (HTTP ${res.status})`);
+    else toast(op === 'approve' ? `Ticket #${id} approved: ${body.result.action} ran` : `Ticket #${id} rejected`);
+  } catch (err) { toast(err.message); }
+  button.disabled = false;
+  refresh();
+}
+
+function describe(e) {
+  const d = e.detail || {};
+  switch (e.step) {
+    case 'webhook': return [`${d.alertname} on ${d.service} `, d.severity ? tag(d.severity, d.severity === 'critical' ? 'bad' : 'warn') : null];
+    case 'retrieve': {
+      if (d.error) return [tag('no context', 'warn'), ` ${d.error}`];
+      const top = (d.candidates || [])[0];
+      return [`${d.kept} kept`, top ? h('span', { class: 'muted' }, ` · top: ${top.title} (${top.similarity})`) : null];
+    }
+    case 'diagnose': return [h('strong', {}, `${d.action} @ ${conf(d.confidence)}`), d.fallback_reason ? [' ', tag(d.fallback_reason, 'bad')] : null,
+      h('div', { class: 'muted' }, d.root_cause || '')];
+    case 'guardrail': return [tag(d.decision, d.decision === 'execute' ? 'ok' : 'warn'),
+      ...(d.reasons || []).map((r) => h('div', { class: 'muted' }, r))];
+    case 'act': return [tag(d.ok ? 'ok' : 'failed', d.ok ? 'ok' : 'bad'), ` ${d.action} on ${d.service} by ${d.approved_by}`,
+      d.error ? h('div', { class: 'muted' }, d.error) : null];
+    case 'ticket': return d.status === 'rejected' ? [`ticket #${d.ticket_id} rejected`]
+      : [`ticket #${d.ticket_id} opened`, ...(d.reasons || []).map((r) => h('div', { class: 'muted' }, r))];
+    case 'resolve': return [tag('resolved', 'ok'), ` recovered ${secs(d.time_to_recovery_ms / 1000)} after firing`];
+    case 'error': return [tag('error', 'bad'), ` ${d.message}`];
+    default: return [JSON.stringify(d)];
+  }
+}
+
+function addEvent(e) {
+  $('feed-empty')?.remove();
+  if (e.step === 'webhook') known.set(e.incident_id, { service: e.detail.service, alertname: e.detail.alertname });
+  const who = known.get(e.incident_id);
+  const li = h('li', { class: 'new' },
+    h('span', { class: 'mono muted' }, time(e.at)),
+    h('span', { class: 'mono', title: e.incident_id || '' }, who ? who.service : short(e.incident_id)),
+    h('span', {}, h('span', { class: 'step' }, e.step), h('div', { class: 'muted mono' }, ms(e.duration_ms))),
+    h('span', {}, describe(e)));
+  const feed = $('feed');
+  feed.prepend(li);
+  while (feed.children.length > 80) feed.lastChild.remove();
+}
+
+async function showIncident(id) {
+  try {
+    const inc = await getJSON(`/api/incidents/${id}`);
+    $('detail-title').textContent = `${inc.alertname} on ${inc.service} · ${inc.status}`;
+    const l = inc.latency_s;
+    $('detail-body').replaceChildren(
+      h('p', { class: 'muted mono' }, `id ${inc.id} · detect ${secs(l.detection_lag)} · decide ${secs(l.decision_time)} · act ${secs(l.time_to_action)} · recover ${secs(l.time_to_recovery)}`),
+      ...inc.audit.map((a) => h('div', { class: 'trail-item' },
+        h('span', { class: 'step' }, a.step), ' ', h('span', { class: 'muted mono' }, `${time(a.at)} ${ms(a.duration_ms)}`),
+        h('pre', {}, JSON.stringify(a.detail, null, 2)))));
+    $('detail').showModal();
+  } catch (err) { toast(err.message); }
+}
+$('detail-close').addEventListener('click', () => $('detail').close());
+
+async function refresh() {
+  try {
+    const [stats, incidents, tickets] = await Promise.all([
+      getJSON('/api/stats'), getJSON('/api/incidents?limit=20'), getJSON('/api/tickets?status=open')]);
+    renderStats(stats); renderIncidents(incidents); renderTickets(tickets);
+  } catch (err) { toast(err.message); }
+}
+let pending;
+const scheduleRefresh = () => { clearTimeout(pending); pending = setTimeout(refresh, 400); };
+
+function connect() {
+  const es = new EventSource('/events');
+  const conn = $('conn');
+  es.onopen = () => { conn.textContent = 'live'; conn.className = 'pill live'; refresh(); };
+  es.onerror = () => { conn.textContent = 'reconnecting'; conn.className = 'pill down'; };
+  es.addEventListener('audit', (msg) => { addEvent(JSON.parse(msg.data)); scheduleRefresh(); });
+}
+refresh();
+connect();
+setInterval(refresh, 30000); // stats age even when nothing happens
+</script>
+</body>
+</html>
