@@ -1,0 +1,22 @@
+# Used only by docker-compose.prod.yml. Caddy gets the domain from $DOMAIN (see
+# docker-compose.prod.yml / .env.example) and issues/renews its HTTPS certificate
+# automatically via Let's Encrypt - no manual cert setup.
+#
+# Everything other than the agent (Prometheus, Alertmanager, Postgres, the demo
+# services) has no published port in docker-compose.prod.yml, so this is the only way
+# into the stack from the public internet.
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		# HSTS: once a browser has seen this once over HTTPS, it won't try plain HTTP again.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Don't advertise the proxy software/version.
+		-Server
+	}
+
+	reverse_proxy agent:3000
+}

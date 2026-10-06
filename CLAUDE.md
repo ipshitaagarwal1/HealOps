@@ -18,25 +18,31 @@ Full spec: `docs/SPEC.md`. Build order: `docs/BUILD_PLAN.md`. Read both before w
 - Embeddings: Google Gemini embedding API (768-dim output)
 - Diagnosis LLM: Groq (`openai/gpt-oss-120b`), OpenAI-compatible chat completions API.
   Llama chat models are not available on this Groq account (404), so gpt-oss was chosen.
-- Docker Compose for everything
+- Docker Compose for everything (production adds Caddy as a reverse proxy - see
+  `docker-compose.prod.yml`)
 - Tests: Node built-in test runner (`node --test`)
 
 ## Repo layout
 ```
-agent/            Node.js agent (webhook, rag, diagnose, guardrail, act, audit, dashboard)
-services/demo/    One Express app, run twice as service-a and service-b
-prometheus/       prometheus.yml, alert.rules.yml
-alertmanager/     alertmanager.yml
-db/               init.sql (schema), seed/ (runbooks + past incidents as JSON)
-scripts/          inject-fault.sh, seed-db.js, demo.sh
-docs/             SPEC.md, BUILD_PLAN.md
+agent/                  Node.js agent (webhook, rag, diagnose, guardrail, act, audit, dashboard)
+services/demo/          One Express app, run twice as service-a and service-b
+prometheus/             prometheus.yml, alert.rules.yml
+alertmanager/           alertmanager.yml
+db/                     init.sql (schema), seed/ (runbooks + past incidents as JSON)
+scripts/                inject-fault.sh, seed-db.js, demo.sh, Dockerfile (seed service)
+docs/                   SPEC.md, BUILD_PLAN.md, DEPLOY.md
+docker-compose.prod.yml Production override (ports, Caddy, memory limits) - docs/DEPLOY.md
+Caddyfile               Reverse proxy + automatic HTTPS, production only
 ```
 
 ## Commands
-- `docker compose up -d --build`   start everything
+- `docker compose up -d --build`   start everything (local dev)
+- `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`
+  start everything (production - see `docs/DEPLOY.md`)
 - `docker compose logs -f agent`   watch the agent
 - `npm test --prefix agent`        unit tests
-- `node scripts/seed-db.js`        embed + load runbooks (idempotent; `--force` re-embeds)
+- `node scripts/seed-db.js`        embed + load runbooks (idempotent; `--force` re-embeds), host-side
+- `docker compose run --rm seed`   same, from inside Docker (no Node needed on the host)
 - `node scripts/query-knowledge.js "text"`   show what RAG retrieves for a query
 - `npm test --prefix scripts`      seed/script unit tests
 - `./scripts/inject-fault.sh service-a error`   break a service on purpose

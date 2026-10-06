@@ -31,11 +31,14 @@ const url = (v) => {
   }
 };
 
-const token = (v) => {
+// Stricter in production (DEPLOY_ENV=production, set by docker-compose.prod.yml): a
+// publicly reachable dashboard needs a harder-to-guess token than a local demo does.
+const token = (strict) => (v) => {
   const s = str(v);
   if (s.error) return s;
   if (s.value === 'change-me') return { error: 'must be changed from the example value' };
-  if (s.value.length < 16) return { error: 'must be at least 16 characters' };
+  const minLength = strict ? 24 : 16;
+  if (s.value.length < minLength) return { error: `must be at least ${minLength} characters` };
   return s;
 };
 
@@ -49,7 +52,6 @@ const SCHEMA = {
   GROQ_API_KEY: ['groqApiKey', str],
   GROQ_MODEL: ['groqModel', str],
   DATABASE_URL: ['databaseUrl', url],
-  ADMIN_TOKEN: ['adminToken', token],
   AGENT_PORT: ['port', num(1, 65535, { integer: true })],
   CONF_RESTART: ['confRestart', fraction],
   CONF_SCALE: ['confScale', fraction],
@@ -86,6 +88,13 @@ export function parseActionTargets(value) {
 export function loadConfig(env) {
   const config = { logLevel: (env.LOG_LEVEL || 'info').toLowerCase() };
   const errors = [];
+  // Set by docker-compose.prod.yml only; everything else (including plain `docker
+  // compose up` for local dev) is treated as non-production.
+  const isProduction = (env.DEPLOY_ENV || '').trim().toLowerCase() === 'production';
+  config.deployEnv = isProduction ? 'production' : 'development';
+  const adminToken = token(isProduction)(env.ADMIN_TOKEN);
+  if (adminToken.error) errors.push(`ADMIN_TOKEN ${adminToken.error}`);
+  else config.adminToken = adminToken.value;
   // Optional: the query embedding is a small call, so it gets a shorter default timeout.
   const embedTimeout = num(100, 120000, { integer: true })(env.EMBED_TIMEOUT_MS || '5000');
   if (embedTimeout.error) errors.push(`EMBED_TIMEOUT_MS ${embedTimeout.error}`);

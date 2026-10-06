@@ -1,0 +1,69 @@
+# Production override for a single Ubuntu cloud VM (amd64 or arm64, e.g. Oracle Ampere).
+# Local dev is unaffected: nothing here changes unless this file is explicitly included.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# What changes from local dev (docker-compose.yml):
+# - restart: unless-stopped is already set on every service in docker-compose.yml, so
+#   there's nothing to add here.
+# - Every host port mapping is removed except Caddy's 80/443. Prometheus, Alertmanager,
+#   Postgres and the demo services become reachable only on the internal compose
+#   network - never from outside the VM.
+# - Caddy reverse-proxies HTTPS traffic for ${DOMAIN} (see .env.example) to the agent's
+#   dashboard/API only, with Let's Encrypt certificates issued and renewed
+#   automatically. See ./Caddyfile.
+# - Memory limits keep the whole stack comfortably inside a 4 GB VM: roughly
+#   512+512+64+512+128+512+128 = 2.4 GB budgeted below, leaving headroom for the OS.
+#   (service-a/service-b keep their existing 512m limit from docker-compose.yml,
+#   unchanged here, because the memory-fault demo deliberately leaks up to ~420 MB and
+#   needs room for that above the 300 MB alert threshold.)
+
+services:
+  service-a:
+    ports: !reset []
+
+  service-b:
+    ports: !reset []
+
+  loadgen:
+    mem_limit: 64m
+
+  prometheus:
+    ports: !reset []
+    mem_limit: 512m
+
+  alertmanager:
+    ports: !reset []
+    mem_limit: 128m
+
+  postgres:
+    mem_limit: 512m
+
+  agent:
+    ports: !reset []
+    mem_limit: 512m
+    environment:
+      # Only used to require a longer ADMIN_TOKEN (agent/src/config.js); nothing else
+      # changes based on it. Local dev never sets this, so its behaviour is untouched.
+      DEPLOY_ENV: production
+
+  caddy:
+    image: caddy:2.9-alpine
+    restart: unless-stopped
+    mem_limit: 128m
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN must be set in .env - see .env.example}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      agent:
+        condition: service_healthy
+
+volumes:
+  caddy_data:
+  caddy_config:
