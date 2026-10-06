@@ -3,11 +3,13 @@ import { createApp } from './app.js';
 import { createAudit } from './audit.js';
 import { loadConfigOrExit, redact } from './config.js';
 import { createPool, pingDb } from './db.js';
+import { createDashboardRouter } from './dashboard.js';
 import { createDiagnoser } from './diagnose.js';
 import { createEvents } from './events.js';
 import { loadRecentActions } from './guardrail.js';
 import { createIncidentStore } from './incidents.js';
 import { createLogger } from './logger.js';
+import { createMetrics } from './metrics.js';
 import { createPipeline } from './pipeline.js';
 import { createRetriever } from './rag.js';
 import { createTicketService, createTicketStore } from './tickets.js';
@@ -17,7 +19,8 @@ const config = loadConfigOrExit();
 const logger = createLogger({ component: 'agent' }, { level: config.logLevel });
 const pool = createPool(config.databaseUrl, logger);
 const events = createEvents();
-const audit = createAudit({ pool, events, logger });
+const metrics = createMetrics();
+const audit = createAudit({ pool, events, logger, metrics });
 const store = createIncidentStore(pool);
 const ticketStore = createTicketStore(pool);
 const execute = createActor({ config, pool });
@@ -32,12 +35,19 @@ const pipeline = createPipeline({
   tickets: ticketStore,
   audit,
   logger,
+  metrics,
 });
 const webhook = createWebhookHandler({ store, audit, logger, pipeline });
 const ticketService = createTicketService({ ticketStore, execute, store, audit, logger });
 
 const app = createApp({
-  webhook, ticketService, adminToken: config.adminToken, checkHealth: () => pingDb(pool), logger,
+  webhook,
+  ticketService,
+  adminToken: config.adminToken,
+  checkHealth: () => pingDb(pool),
+  dashboard: createDashboardRouter({ pool, events, logger }),
+  metrics,
+  logger,
 });
 const server = app.listen(config.port, () => {
   logger.info('agent listening', { port: config.port, config: redact(config) });
