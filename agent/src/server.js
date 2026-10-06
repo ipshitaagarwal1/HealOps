@@ -6,10 +6,12 @@ import { createPool, pingDb } from './db.js';
 import { createDashboardRouter } from './dashboard.js';
 import { createDiagnoser } from './diagnose.js';
 import { createEvents } from './events.js';
+import { createHealthRouter } from './health.js';
 import { loadRecentActions } from './guardrail.js';
 import { createIncidentStore } from './incidents.js';
 import { createLogger } from './logger.js';
 import { createMetrics } from './metrics.js';
+import { createOutageSwitch, withOutageSwitch } from './outage.js';
 import { createPipeline } from './pipeline.js';
 import { createRetriever } from './rag.js';
 import { createTicketService, createTicketStore } from './tickets.js';
@@ -24,10 +26,11 @@ const audit = createAudit({ pool, events, logger, metrics });
 const store = createIncidentStore(pool);
 const ticketStore = createTicketStore(pool);
 const execute = createActor({ config, pool });
+const outageSwitch = createOutageSwitch();
 
 const pipeline = createPipeline({
   retrieve: createRetriever({ config, pool }),
-  diagnose: createDiagnoser({ config }),
+  diagnose: withOutageSwitch(createDiagnoser({ config }), outageSwitch),
   loadHistory: (service) => loadRecentActions(pool, service),
   execute,
   config,
@@ -46,6 +49,7 @@ const app = createApp({
   adminToken: config.adminToken,
   checkHealth: () => pingDb(pool),
   dashboard: createDashboardRouter({ pool, events, logger }),
+  health: createHealthRouter({ config, logger, outageSwitch }),
   metrics,
   logger,
 });

@@ -3,54 +3,94 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Self-Healing Agent</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%232f6fdf'/%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' stroke='white' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<title>HealOps</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext x='1' y='13' font-size='13'%3E%F0%9F%A9%BA%3C/text%3E%3C/svg%3E">
 <style>
   :root {
-    --bg: #f6f7f9; --panel: #ffffff; --text: #1b1f24; --muted: #5f6b7a; --line: #e3e7ec;
-    --accent: #2f6fdf; --ok: #1a7f4b; --ok-bg: #e5f4ec; --warn: #9a6400; --warn-bg: #fdf2dc;
-    --bad: #b42318; --bad-bg: #fdeceb; --info-bg: #e9f0fd; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --bg: #f6f7f9; --panel: #ffffff; --panel-2: #fbfbfc; --text: #1b1f24; --muted: #5f6b7a; --line: #e3e7ec;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --shadow: 0 1px 2px rgba(20, 24, 30, .06);
+
+    /* Brand palette — identical hues in light and dark mode (see rule #3). */
+    --pink: #EC4899; --orange: #F97316; --blue: #3B82F6; --purple: #8B5CF6;
+    --green: #22C55E; --red: #EF4444; --yellow: #EAB308;
+
+    --pink-bg: rgba(236,72,153,.10); --orange-bg: rgba(249,115,22,.10); --blue-bg: rgba(59,130,246,.10);
+    --purple-bg: rgba(139,92,246,.10); --green-bg: rgba(34,197,94,.12); --red-bg: rgba(239,68,68,.10); --yellow-bg: rgba(234,179,8,.16);
+
+    /* Semantic roles built from the palette. */
+    --accent: var(--pink); --accent-weak: var(--pink-bg);
+    --ok: var(--green); --ok-bg: var(--green-bg);
+    --warn: var(--yellow); --warn-bg: var(--yellow-bg);
+    --bad: var(--red); --bad-bg: var(--red-bg);
+    --info: var(--blue); --info-bg: var(--blue-bg);
+    --ticket: var(--orange); --ticket-bg: var(--orange-bg);
+    --safety: var(--purple); --safety-bg: var(--purple-bg);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --panel: #171b21; --panel-2: #1c2129; --text: #e6e9ee; --muted: #94a0b0; --line: #262c35;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+    --pink-bg: rgba(236,72,153,.20); --orange-bg: rgba(249,115,22,.20); --blue-bg: rgba(59,130,246,.20);
+    --purple-bg: rgba(139,92,246,.22); --green-bg: rgba(34,197,94,.20); --red-bg: rgba(239,68,68,.20); --yellow-bg: rgba(234,179,8,.24);
   }
   @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0f1216; --panel: #171b21; --text: #e6e9ee; --muted: #94a0b0; --line: #262c35;
-      --accent: #6c9cff; --ok: #4cc38a; --ok-bg: #12291f; --warn: #e3b341; --warn-bg: #2e2510;
-      --bad: #ff7b72; --bad-bg: #331716; --info-bg: #15213a;
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216; --panel: #171b21; --panel-2: #1c2129; --text: #e6e9ee; --muted: #94a0b0; --line: #262c35;
+      --shadow: 0 1px 2px rgba(0,0,0,.4);
+      --pink-bg: rgba(236,72,153,.20); --orange-bg: rgba(249,115,22,.20); --blue-bg: rgba(59,130,246,.20);
+      --purple-bg: rgba(139,92,246,.22); --green-bg: rgba(34,197,94,.20); --red-bg: rgba(239,68,68,.20); --yellow-bg: rgba(234,179,8,.24);
     }
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
   header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
-    padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 2; }
-  h1 { font-size: 17px; margin: 0; font-weight: 650; }
-  h2 { font-size: 13px; margin: 0 0 10px; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    padding: 12px 20px; background: linear-gradient(90deg, var(--pink), var(--orange)); position: sticky; top: 0; z-index: 20;
+    box-shadow: 0 1px 6px rgba(0,0,0,.15); }
+  h1 { font-size: 18px; margin: 0; font-weight: 750; display: flex; align-items: center; gap: 8px; color: #fff; letter-spacing: .01em; }
+  h2 { font-size: 13px; margin: 0 0 10px; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); display: flex; align-items: center; gap: 6px; }
   main { padding: 16px 20px 40px; display: grid; gap: 16px; max-width: 1400px; margin: 0 auto; }
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; box-shadow: var(--shadow); }
   .row { display: grid; gap: 16px; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
   @media (max-width: 900px) { .row { grid-template-columns: 1fr; } }
   .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
   .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-  .live { color: var(--ok); background: var(--ok-bg); } .down { color: var(--bad); background: var(--bad-bg); }
-  input[type=password] { font: inherit; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); width: 190px; }
+  .live { color: var(--green); background: rgba(255,255,255,.22); } .down { color: #fff; background: rgba(0,0,0,.22); }
+  header .pill.live { color: #fff; } header .pill.down { color: #fff; }
+  input[type=password] { font: inherit; padding: 5px 8px; border: 1px solid rgba(255,255,255,.5); border-radius: 6px; background: rgba(255,255,255,.18); color: #fff; width: 190px; }
+  input[type=password]::placeholder { color: rgba(255,255,255,.75); }
+  header label { color: rgba(255,255,255,.9) !important; }
+  select { font: inherit; padding: 4px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); }
   button { font: inherit; font-weight: 600; padding: 5px 11px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--pink); color: var(--pink); }
   button:disabled { opacity: .5; cursor: default; }
   button.approve { border-color: var(--ok); color: var(--ok); } button.reject { border-color: var(--bad); color: var(--bad); }
+  header button { background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.5); color: #fff; }
+  header button:hover:not(:disabled) { background: rgba(255,255,255,.3); color: #fff; border-color: #fff; }
+  .icon-btn { padding: 5px 9px; }
+  .outage-btn { border-color: var(--purple); color: var(--purple); }
+  .outage-btn:hover:not(:disabled) { border-color: var(--purple); color: var(--purple); background: var(--purple-bg); }
+  .outage-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 650; padding: 3px 10px; border-radius: 999px; color: var(--purple); background: var(--purple-bg); }
+  .outage-badge[hidden] { display: none; }
   .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
   @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  .tile { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
-  .tile .label { color: var(--muted); font-size: 12px; }
+  .tile { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--panel-2); }
+  .tile .label { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 4px; }
   .tile .value { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
   .tile .sub { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-  .feed { list-style: none; margin: 0; padding: 0; max-height: 420px; overflow: auto; }
+  .feed { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow: auto; }
   .feed li { display: grid; grid-template-columns: 64px 74px 82px minmax(0, 1fr); gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+  .feed li.empty { display: block; border-bottom: none; }
   .feed li.new { animation: flash 1.2s ease-out; }
-  @keyframes flash { from { background: var(--info-bg); } to { background: transparent; } }
+  @keyframes flash { from { background: var(--pink-bg); } to { background: transparent; } }
   .mono { font-family: var(--mono); font-size: 12px; } .muted { color: var(--muted); }
   .step { font-weight: 650; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
   .tag { display: inline-block; padding: 1px 7px; border-radius: 5px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-  .t-ok { color: var(--ok); background: var(--ok-bg); } .t-warn { color: var(--warn); background: var(--warn-bg); }
-  .t-bad { color: var(--bad); background: var(--bad-bg); } .t-info { color: var(--accent); background: var(--info-bg); }
+  .t-ok { color: var(--ok); background: var(--ok-bg); } .t-warn { color: #8a6d00; background: var(--warn-bg); }
+  :root[data-theme="dark"] .t-warn { color: var(--warn); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .t-warn { color: var(--warn); } }
+  .t-bad { color: var(--bad); background: var(--bad-bg); } .t-info { color: var(--info); background: var(--info-bg); }
+  .t-ticket { color: var(--ticket); background: var(--ticket-bg); } .t-safety { color: var(--safety); background: var(--safety-bg); }
   .scroll { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
   th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -58,47 +98,154 @@
   tr.click { cursor: pointer; } tr.click:hover td { background: var(--bg); }
   .reason { font-size: 12px; color: var(--muted); max-width: 420px; }
   .empty { color: var(--muted); padding: 10px 0; }
-  dialog { width: min(900px, calc(100vw - 32px)); max-height: 85vh; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text); padding: 0; }
-  dialog::backdrop { background: rgba(0,0,0,.45); }
-  .dlg-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); }
-  .dlg-body { padding: 12px 16px; }
   pre { margin: 4px 0 0; white-space: pre-wrap; word-break: break-word; font-family: var(--mono); font-size: 12px; background: var(--bg); padding: 8px; border-radius: 6px; }
-  .trail-item { padding: 8px 0; border-bottom: 1px solid var(--line); }
-  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); padding: 8px 14px; border-radius: 8px; background: var(--text); color: var(--bg); font-weight: 600; opacity: 0; transition: opacity .2s; pointer-events: none; }
+
+  /* "?" tooltip: plain, accessible, no JS component */
+  .qtip { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--line); color: var(--muted); font-size: 10px; font-weight: 700; cursor: help; flex: none; }
+  .qtip:hover, .qtip:focus { background: var(--pink); color: #fff; }
+
+  /* Service health cards */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--panel-2); }
+  .card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .card-head .name { font-weight: 650; }
+  .status-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .status-healthy { color: var(--ok); background: var(--ok-bg); } .status-healthy .status-dot { background: var(--ok); }
+  .status-degraded { color: #8a6d00; background: var(--warn-bg); } .status-degraded .status-dot { background: var(--warn); }
+  :root[data-theme="dark"] .status-degraded { color: var(--warn); }
+  .status-down { color: var(--bad); background: var(--bad-bg); } .status-down .status-dot { background: var(--bad); }
+  .metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+  .metric { text-align: left; }
+  .metric .m-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+  .metric .m-value { font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .spark { display: block; margin-top: 2px; }
+  .fault-badge { font-size: 11px; font-weight: 650; padding: 2px 8px; border-radius: 999px; color: var(--bad); background: var(--bad-bg); }
+  .card-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .card-actions button { font-size: 12px; padding: 4px 8px; }
+  .card-actions button.heal { border-color: var(--ok); color: var(--ok); }
+
+  /* Pipeline stepper */
+  .stepper { display: flex; align-items: flex-start; gap: 4px; overflow-x: auto; padding: 6px 2px 10px; }
+  .step-node { display: flex; flex-direction: column; align-items: center; min-width: 110px; flex: 1; position: relative; }
+  .step-circle { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--line); background: var(--panel); color: var(--muted);
+    display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; transition: all .25s; }
+  .step-node.active .step-circle { animation: pulse-generic 1.1s infinite; }
+  @keyframes pulse-generic { 0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; } 50% { box-shadow: 0 0 0 5px transparent; opacity: .75; } }
+  .step-label { font-size: 11px; margin-top: 6px; text-align: center; color: var(--muted); font-weight: 600; }
+  .step-node.done .step-label, .step-node.active .step-label { color: var(--text); }
+  .step-msg { font-size: 10.5px; margin-top: 2px; text-align: center; color: var(--muted); max-width: 108px; line-height: 1.25; }
+  .step-line { position: absolute; top: 16px; left: -50%; width: 100%; height: 2px; background: var(--line); z-index: -1; }
+  .step-node:first-child .step-line { display: none; }
+  .step-node.done .step-line { background: var(--ok); }
+  /* Per-step identity + outcome colours (set via inline style custom props from JS). */
+  .step-node.clr-pink .step-circle { border-color: var(--pink); background: var(--pink-bg); color: var(--pink); }
+  .step-node.clr-blue .step-circle { border-color: var(--blue); background: var(--blue-bg); color: var(--blue); }
+  .step-node.clr-purple .step-circle { border-color: var(--purple); background: var(--purple-bg); color: var(--purple); }
+  .step-node.clr-orange .step-circle { border-color: var(--orange); background: var(--orange-bg); color: var(--orange); }
+  .step-node.clr-green .step-circle { border-color: var(--green); background: var(--green-bg); color: var(--green); }
+  .step-node.clr-red .step-circle { border-color: var(--red); background: var(--red-bg); color: var(--red); }
+  .step-node.clr-yellow .step-circle { border-color: var(--yellow); background: var(--yellow-bg); color: #8a6d00; }
+  :root[data-theme="dark"] .step-node.clr-yellow .step-circle { color: var(--yellow); }
+  .step-node.clr-red .step-msg { color: var(--red); } .step-node.clr-orange .step-msg { color: var(--orange); }
+  .step-node.clr-yellow .step-msg { color: #8a6d00; } :root[data-theme="dark"] .step-node.clr-yellow .step-msg { color: var(--yellow); }
+  .pipeline-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 8px; }
+  .pipeline-idle { color: var(--muted); padding: 20px 0; text-align: center; }
+  .timer { font-family: var(--mono); font-weight: 650; }
+  .pipeline-detail { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .pipeline-detail b { color: var(--text); }
+
+  /* Drawer */
+  #overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 30; }
+  #overlay.open { opacity: 1; pointer-events: auto; }
+  #drawer { position: fixed; top: 0; right: 0; height: 100%; width: min(480px, 100vw); background: var(--panel); border-left: 1px solid var(--line);
+    transform: translateX(100%); transition: transform .25s ease; z-index: 31; display: flex; flex-direction: column; box-shadow: -4px 0 16px rgba(0,0,0,.15); }
+  #drawer.open { transform: translateX(0); }
+  .dlg-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .dlg-body { padding: 14px 16px; overflow-y: auto; flex: 1; }
+  .dlg-section { margin-bottom: 18px; }
+  .dlg-section h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 8px; }
+  .timeline { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--line); margin-left: 6px; }
+  .timeline li { position: relative; padding: 2px 0 14px 18px; }
+  .timeline li::before { content: ""; position: absolute; left: -7px; top: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--dot, var(--pink)); border: 2px solid var(--panel); }
+  .timeline-msg { font-size: 12.5px; margin: 2px 0 2px; font-weight: 600; }
+  .retrieved-item { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; background: var(--panel-2); }
+  .retrieved-item .sim { float: right; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .plain-reason { padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .plain-reason:last-child { border-bottom: none; }
+
+  #toast-wrap { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 40; align-items: center; }
+  .toast { padding: 9px 16px; border-radius: 8px; background: var(--text); color: var(--bg); font-weight: 600; font-size: 13px;
+    box-shadow: var(--shadow); opacity: 0; transform: translateY(6px); transition: opacity .2s, transform .2s; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.ok { background: var(--ok); color: #fff; } .toast.warn { background: var(--yellow); color: #241a00; } .toast.bad { background: var(--bad); color: #fff; }
+  .toast.ticket { background: var(--orange); color: #fff; }
 </style>
 </head>
 <body>
 <header>
-  <h1>Self-Healing Agent</h1>
+  <h1>🩺 HealOps</h1>
   <div class="controls">
     <span id="conn" class="pill down">connecting</span>
-    <label class="muted" for="token">Admin token</label>
-    <input id="token" type="password" autocomplete="off" placeholder="needed to approve/reject">
+    <button id="theme-toggle" class="icon-btn" title="Toggle dark / light theme" type="button">🌓</button>
+    <label for="token">Admin token</label>
+    <input id="token" type="password" autocomplete="off" placeholder="needed to approve/reject/fault">
   </div>
 </header>
 
 <main>
   <section class="panel">
-    <h2>Latency, last <span id="window">0</span> incidents (median / p95)</h2>
+    <h2>Service health</h2>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <section class="panel">
+    <div class="pipeline-meta">
+      <h2 style="margin:0">Live pipeline</h2>
+      <div class="controls">
+        <span id="outage-badge" class="outage-badge" hidden>🧪 AI outage armed</span>
+        <button id="outage-btn" class="outage-btn" type="button">🧪 Simulate AI outage</button>
+        <span id="pipeline-service" class="muted mono"></span>
+      </div>
+    </div>
+    <div id="pipeline"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Latency, last <span id="window">0</span> incidents (median /
+      <span class="qtip" tabindex="0" title="p95 latency: 95% of incidents were faster than this.">?</span>p95)
+    </h2>
     <div class="stats" id="stats"></div>
   </section>
 
   <div class="row">
     <section class="panel">
-      <h2>Live pipeline</h2>
+      <h2>Pipeline log</h2>
       <ul class="feed" id="feed"><li class="empty" id="feed-empty">Waiting for events. Inject a fault to see the pipeline run.</li></ul>
     </section>
     <section class="panel">
       <h2>Open tickets</h2>
       <div class="scroll"><table>
-        <thead><tr><th>#</th><th>Service</th><th>Action</th><th>Conf.</th><th>Why a human is needed</th><th></th></tr></thead>
+        <thead><tr><th>#</th><th>Service</th><th>Action</th><th>
+          <span class="qtip" tabindex="0" title="Confidence: how sure the AI model is in its diagnosis, from 0 to 1.">?</span> Conf.</th>
+          <th>Why a human is needed</th><th></th></tr></thead>
         <tbody id="tickets"></tbody>
       </table></div>
     </section>
   </div>
 
   <section class="panel">
-    <h2>Last 20 incidents <span class="muted" style="text-transform:none;letter-spacing:0">(click a row for the audit trail)</span></h2>
+    <h2 style="margin-bottom:6px">Last incidents <span class="muted" style="text-transform:none;letter-spacing:0">(click a row for the audit trail)</span></h2>
+    <div class="controls" style="margin-bottom:10px">
+      <label class="muted" for="filter-service">Service</label>
+      <select id="filter-service"><option value="">All</option></select>
+      <label class="muted" for="filter-decision">Decision</label>
+      <select id="filter-decision">
+        <option value="">All</option>
+        <option value="execute">Auto-fixed</option>
+        <option value="ticket">Ticketed</option>
+      </select>
+    </div>
     <div class="scroll"><table>
       <thead><tr><th>Fired</th><th>Service</th><th>Alert</th><th>Status</th><th>Diagnosis</th><th>Decision</th>
         <th>Detect</th><th>Decide</th><th>Act</th><th>Recover</th></tr></thead>
@@ -107,11 +254,12 @@
   </section>
 </main>
 
-<dialog id="detail">
-  <div class="dlg-head"><strong id="detail-title">Incident</strong><button id="detail-close">Close</button></div>
+<div id="overlay"></div>
+<aside id="drawer">
+  <div class="dlg-head"><strong id="detail-title">Incident</strong><button id="detail-close" type="button">Close</button></div>
   <div class="dlg-body" id="detail-body"></div>
-</dialog>
-<div id="toast"></div>
+</aside>
+<div id="toast-wrap"></div>
 
 <script>
 // All data goes through textContent: diagnosis text comes from an LLM and must never be
@@ -127,22 +275,37 @@ function h(tag, props = {}, ...children) {
   for (const c of children.flat()) if (c != null) el.append(c instanceof Node ? c : String(c));
   return el;
 }
-const tag = (text, kind) => h('span', { class: `tag t-${kind}` }, text);
+const tagEl = (text, kind) => h('span', { class: `tag t-${kind}` }, text);
 const time = (d) => (d ? new Date(d).toLocaleTimeString([], { hour12: false }) : '');
 const secs = (s) => (s == null ? '–' : s < 10 ? `${s.toFixed(1)}s` : `${Math.round(s)}s`);
 const ms = (v) => (v == null ? '' : v < 1000 ? `${v}ms` : `${(v / 1000).toFixed(1)}s`);
 const short = (id) => (id ? id.slice(0, 8) : '');
 const conf = (c) => (c == null ? '–' : Number(c).toFixed(2));
 
-function toast(text) {
-  const t = $('toast'); t.textContent = text; t.style.opacity = 1;
-  clearTimeout(toast.timer); toast.timer = setTimeout(() => { t.style.opacity = 0; }, 2500);
+// ---- theme (manual toggle persisted in localStorage, on top of prefers-color-scheme) ----
+const root = document.documentElement;
+function applyTheme(theme) { if (theme) root.setAttribute('data-theme', theme); else root.removeAttribute('data-theme'); }
+try { applyTheme(localStorage.getItem('theme')); } catch {}
+$('theme-toggle').addEventListener('click', () => {
+  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const current = root.getAttribute('data-theme') || (dark ? 'dark' : 'light');
+  const next = current === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  try { localStorage.setItem('theme', next); } catch {}
+});
+
+// ---- toasts ----
+function toast(text, kind = 'info') {
+  const el = h('div', { class: `toast ${kind === 'info' ? '' : kind}` }, text);
+  $('toast-wrap').append(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 250); }, 4000);
 }
 
-// Token lives only in this tab's sessionStorage (may be unavailable: guard every access).
+// Token lives in localStorage so it survives across tabs/reloads for this demo machine.
 const token = $('token');
-try { token.value = sessionStorage.getItem('adminToken') || ''; } catch {}
-token.addEventListener('input', () => { try { sessionStorage.setItem('adminToken', token.value); } catch {} });
+try { token.value = localStorage.getItem('adminToken') || ''; } catch {}
+token.addEventListener('input', () => { try { localStorage.setItem('adminToken', token.value); } catch {} });
 
 async function getJSON(url) {
   const res = await fetch(url);
@@ -150,7 +313,7 @@ async function getJSON(url) {
   return res.json();
 }
 
-const STATUS_KIND = { acted: 'ok', resolved: 'ok', ticketed: 'warn', failed: 'bad', diagnosed: 'info', received: 'info' };
+const STATUS_KIND = { acted: 'ok', resolved: 'ok', ticketed: 'ticket', failed: 'bad', diagnosed: 'info', received: 'info' };
 const LABELS = { detection_lag: ['Detection lag', 'alert fired → agent received'],
   decision_time: ['Decision time', 'received → guardrail decided'],
   time_to_action: ['Time to action', 'fired → action ran'],
@@ -168,22 +331,41 @@ function renderStats(data) {
 }
 
 const known = new Map(); // incident id -> { service, alertname }
+let allIncidents = [];
+
+function applyFilters(rows) {
+  const service = $('filter-service').value;
+  const decision = $('filter-decision').value;
+  return rows.filter((r) => (!service || r.service === service) && (!decision || r.decision === decision)).slice(0, 20);
+}
 
 function renderIncidents(rows) {
+  allIncidents = rows;
   for (const r of rows) known.set(r.id, { service: r.service, alertname: r.alertname });
-  if (!rows.length) { $('incidents').replaceChildren(h('tr', {}, h('td', { colspan: 10, class: 'empty' }, 'No incidents yet.'))); return; }
-  $('incidents').replaceChildren(...rows.map((r) => h('tr', { class: 'click', onclick: () => showIncident(r.id) },
+  const serviceSelect = $('filter-service');
+  const services = [...new Set(rows.map((r) => r.service))];
+  if (serviceSelect.dataset.options !== services.join(',')) {
+    const current = serviceSelect.value;
+    serviceSelect.replaceChildren(h('option', { value: '' }, 'All'), ...services.map((s) => h('option', { value: s }, s)));
+    serviceSelect.value = services.includes(current) ? current : '';
+    serviceSelect.dataset.options = services.join(',');
+  }
+  const filtered = applyFilters(rows);
+  if (!filtered.length) { $('incidents').replaceChildren(h('tr', {}, h('td', { colspan: 10, class: 'empty' }, 'No incidents match.'))); return; }
+  $('incidents').replaceChildren(...filtered.map((r) => h('tr', { class: 'click', onclick: () => showIncident(r.id) },
     h('td', { class: 'mono' }, time(r.fired_at)),
     h('td', {}, r.service),
     h('td', {}, r.alertname),
-    h('td', {}, tag(r.status, STATUS_KIND[r.status] || 'info')),
+    h('td', {}, tagEl(r.status, STATUS_KIND[r.status] || 'info')),
     h('td', {}, r.action ? `${r.action} @ ${conf(r.confidence)}` : '–'),
-    h('td', {}, r.decision ? tag(r.decision, r.decision === 'execute' ? 'ok' : 'warn') : '–'),
+    h('td', {}, r.decision ? tagEl(r.decision, r.decision === 'execute' ? 'ok' : 'ticket') : '–'),
     h('td', {}, secs(r.latency_s.detection_lag)),
     h('td', {}, secs(r.latency_s.decision_time)),
     h('td', {}, secs(r.latency_s.time_to_action)),
     h('td', {}, secs(r.latency_s.time_to_recovery)))));
 }
+$('filter-service').addEventListener('change', () => renderIncidents(allIncidents));
+$('filter-decision').addEventListener('change', () => renderIncidents(allIncidents));
 
 function renderTickets(rows) {
   if (!rows.length) { $('tickets').replaceChildren(h('tr', {}, h('td', { colspan: 6, class: 'empty' }, 'No open tickets.'))); return; }
@@ -203,40 +385,73 @@ function renderTickets(rows) {
 }
 
 async function decide(id, op, button) {
-  if (!token.value) { toast('Enter the admin token first'); token.focus(); return; }
+  if (!token.value) { toast('Enter the admin token first', 'warn'); token.focus(); return; }
   button.disabled = true;
   try {
     const res = await fetch(`/api/tickets/${id}/${op}`, { method: 'POST', headers: { 'x-admin-token': token.value } });
     const body = await res.json().catch(() => ({}));
-    if (res.status === 401) toast('Wrong admin token');
-    else if (!res.ok) toast(body.error || (body.result && body.result.error) || `Failed (HTTP ${res.status})`);
-    else toast(op === 'approve' ? `Ticket #${id} approved: ${body.result.action} ran` : `Ticket #${id} rejected`);
-  } catch (err) { toast(err.message); }
+    if (res.status === 401) toast('Wrong admin token', 'bad');
+    else if (!res.ok) toast(body.error || (body.result && body.result.error) || `Failed (HTTP ${res.status})`, 'bad');
+    else toast(op === 'approve' ? `Ticket #${id} approved: ${body.result.action} ran` : `Ticket #${id} rejected`, op === 'approve' ? 'ok' : 'ticket');
+  } catch (err) { toast(err.message, 'bad'); }
   button.disabled = false;
   refresh();
 }
 
+// ---- Plain-English outcome for each pipeline step. Shared by the live stepper, the
+// pipeline log, and the incident drawer timeline, so all three agree with each other. ----
+const REASON_SHORT = {
+  cooldown_active: 'cooldown active',
+  too_many_actions: 'too many actions (circuit breaker)',
+  dry_run: 'dry run enabled',
+  rollback_deploy: 'rollback always needs a human',
+};
+function shortGuardrailReason(reasons) {
+  const first = (reasons || [])[0];
+  if (!first) return 'blocked';
+  const key = Object.keys(REASON_SHORT).find((k) => first.includes(k));
+  return key ? REASON_SHORT[key] : first;
+}
+
+// Returns { icon, color, message } for one audit step's detail payload.
+function stepOutcome(step, detail) {
+  const d = detail || {};
+  switch (step) {
+    case 'webhook':
+      return { icon: '🔔', color: 'red', message: `${d.alertname} fired (${d.severity || 'unknown'})` };
+    case 'retrieve':
+      if (d.error) return { icon: '⚠️', color: 'yellow', message: 'No past context, confidence lowered' };
+      if (!d.kept) return { icon: '⚠️', color: 'yellow', message: 'No past context, confidence lowered' };
+      return { icon: '✅', color: 'blue', message: `${d.kept} similar incident${d.kept === 1 ? '' : 's'} found` };
+    case 'diagnose':
+      if (d.fallback_reason === 'llm_error' || d.fallback_reason === 'llm_invalid_output')
+        return { icon: '❌', color: 'red', message: 'AI unavailable, escalated to a human' };
+      return { icon: '✅', color: 'pink', message: `${d.action} @ ${conf(d.confidence)}` };
+    case 'guardrail':
+      if (d.decision === 'ticket') return { icon: '🛑', color: 'orange', message: shortGuardrailReason(d.reasons) };
+      return { icon: '✅', color: 'purple', message: 'Cleared to auto-fix' };
+    case 'act':
+      if (d.ok === false) return { icon: '❌', color: 'red', message: 'Restart failed, ticket opened' };
+      return { icon: '✅', color: 'green', message: `Auto-fixed with ${d.action}` };
+    case 'ticket':
+      if (d.status === 'rejected') return { icon: '🛑', color: 'orange', message: 'Ticket rejected by a human' };
+      return { icon: '🛑', color: 'orange', message: 'Ticket opened for a human' };
+    case 'resolve':
+      return { icon: '✅', color: 'green', message: `Resolved in ${secs((d.time_to_recovery_ms ?? 0) / 1000)}` };
+    case 'error':
+      return { icon: '❌', color: 'red', message: d.message || 'Unexpected error' };
+    default:
+      return { icon: 'ℹ️', color: 'blue', message: '' };
+  }
+}
+
 function describe(e) {
   const d = e.detail || {};
-  switch (e.step) {
-    case 'webhook': return [`${d.alertname} on ${d.service} `, d.severity ? tag(d.severity, d.severity === 'critical' ? 'bad' : 'warn') : null];
-    case 'retrieve': {
-      if (d.error) return [tag('no context', 'warn'), ` ${d.error}`];
-      const top = (d.candidates || [])[0];
-      return [`${d.kept} kept`, top ? h('span', { class: 'muted' }, ` · top: ${top.title} (${top.similarity})`) : null];
-    }
-    case 'diagnose': return [h('strong', {}, `${d.action} @ ${conf(d.confidence)}`), d.fallback_reason ? [' ', tag(d.fallback_reason, 'bad')] : null,
-      h('div', { class: 'muted' }, d.root_cause || '')];
-    case 'guardrail': return [tag(d.decision, d.decision === 'execute' ? 'ok' : 'warn'),
-      ...(d.reasons || []).map((r) => h('div', { class: 'muted' }, r))];
-    case 'act': return [tag(d.ok ? 'ok' : 'failed', d.ok ? 'ok' : 'bad'), ` ${d.action} on ${d.service} by ${d.approved_by}`,
-      d.error ? h('div', { class: 'muted' }, d.error) : null];
-    case 'ticket': return d.status === 'rejected' ? [`ticket #${d.ticket_id} rejected`]
-      : [`ticket #${d.ticket_id} opened`, ...(d.reasons || []).map((r) => h('div', { class: 'muted' }, r))];
-    case 'resolve': return [tag('resolved', 'ok'), ` recovered ${secs(d.time_to_recovery_ms / 1000)} after firing`];
-    case 'error': return [tag('error', 'bad'), ` ${d.message}`];
-    default: return [JSON.stringify(d)];
-  }
+  const outcome = stepOutcome(e.step, d);
+  const extra = [];
+  if (e.step === 'diagnose' && d.root_cause) extra.push(h('div', { class: 'muted' }, d.root_cause));
+  if (e.step === 'guardrail') extra.push(...(d.reasons || []).slice(1).map((r) => h('div', { class: 'muted' }, r)));
+  return [h('span', {}, `${outcome.icon} `), h('strong', {}, outcome.message), ...extra];
 }
 
 function addEvent(e) {
@@ -253,27 +468,232 @@ function addEvent(e) {
   while (feed.children.length > 80) feed.lastChild.remove();
 }
 
+// ---- Incident detail drawer ----
+function plainReasons(reasons) {
+  const EXPLAIN = {
+    cooldown_active: 'A fix already ran on this service recently, so the agent is waiting out its cooldown before trying again.',
+    too_many_actions: 'This service has hit its hourly limit on automated fixes (circuit breaker) — a human needs to look.',
+    dry_run: 'Dry run is enabled, so the agent never acts automatically; every fix becomes a ticket.',
+    llm_error: 'The AI model could not be reached or timed out, so the agent played it safe and escalated.',
+    llm_invalid_output: "The AI model's answer could not be understood, so the agent played it safe and escalated.",
+  };
+  return (reasons || []).map((r) => {
+    const key = Object.keys(EXPLAIN).find((k) => r.includes(k));
+    return h('div', { class: 'plain-reason' }, h('div', {}, r), key ? h('div', { class: 'muted' }, EXPLAIN[key]) : null);
+  });
+}
+
 async function showIncident(id) {
   try {
     const inc = await getJSON(`/api/incidents/${id}`);
     $('detail-title').textContent = `${inc.alertname} on ${inc.service} · ${inc.status}`;
     const l = inc.latency_s;
+    const diagnosis = inc.diagnosis || {};
+    const retrieved = inc.retrieved || [];
+    const guardrail = inc.guardrail || {};
     $('detail-body').replaceChildren(
       h('p', { class: 'muted mono' }, `id ${inc.id} · detect ${secs(l.detection_lag)} · decide ${secs(l.decision_time)} · act ${secs(l.time_to_action)} · recover ${secs(l.time_to_recovery)}`),
-      ...inc.audit.map((a) => h('div', { class: 'trail-item' },
-        h('span', { class: 'step' }, a.step), ' ', h('span', { class: 'muted mono' }, `${time(a.at)} ${ms(a.duration_ms)}`),
-        h('pre', {}, JSON.stringify(a.detail, null, 2)))));
-    $('detail').showModal();
-  } catch (err) { toast(err.message); }
+      h('div', { class: 'dlg-section' },
+        h('h3', {}, 'AI diagnosis'),
+        diagnosis.fallback_reason ? h('div', {}, tagEl('AI unavailable, escalated to a human', 'bad')) : null,
+        diagnosis.root_cause ? h('div', { style: 'margin-top:6px' }, h('b', {}, 'Root cause: '), diagnosis.root_cause) : h('div', { class: 'muted' }, 'No diagnosis recorded.'),
+        diagnosis.reasoning ? h('div', { class: 'muted', style: 'margin-top:4px' }, diagnosis.reasoning) : null,
+        diagnosis.action ? h('div', { style: 'margin-top:6px' }, tagEl(`${diagnosis.action} @ ${conf(diagnosis.confidence)}`, diagnosis.fallback_reason ? 'bad' : 'info')) : null),
+      h('div', { class: 'dlg-section' },
+        h('h3', {}, 'Retrieved past incidents'),
+        retrieved.length
+          ? retrieved.map((r) => h('div', { class: 'retrieved-item' },
+              h('span', { class: 'sim' }, `similarity ${Number(r.similarity).toFixed(2)}`), h('div', {}, r.title)))
+          : h('div', {}, tagEl('No past context, confidence lowered', 'warn'))),
+      h('div', { class: 'dlg-section' },
+        h('h3', {}, 'Safety check (guardrail)'),
+        guardrail.decision ? tagEl(guardrail.decision, guardrail.decision === 'execute' ? 'ok' : 'ticket') : h('span', { class: 'muted' }, 'No decision recorded.'),
+        ...plainReasons(guardrail.reasons)),
+      h('div', { class: 'dlg-section' },
+        h('h3', {}, 'Audit trail'),
+        h('ul', { class: 'timeline' }, ...inc.audit.map((a) => {
+          const outcome = stepOutcome(a.step, a.detail);
+          return h('li', { style: `--dot: var(--${outcome.color})` },
+            h('span', { class: 'step' }, a.step), ' ', h('span', { class: 'muted mono' }, `${time(a.at)} ${ms(a.duration_ms)}`),
+            h('div', { class: 'timeline-msg' }, `${outcome.icon} ${outcome.message}`),
+            h('pre', {}, JSON.stringify(a.detail, null, 2)));
+        }))));
+    openDrawer();
+  } catch (err) { toast(err.message, 'bad'); }
 }
-$('detail-close').addEventListener('click', () => $('detail').close());
+function openDrawer() { $('drawer').classList.add('open'); $('overlay').classList.add('open'); }
+function closeDrawer() { $('drawer').classList.remove('open'); $('overlay').classList.remove('open'); }
+$('detail-close').addEventListener('click', closeDrawer);
+$('overlay').addEventListener('click', closeDrawer);
+
+// ---- Service health cards + demo fault controls ----
+function sparkline(points, { width = 140, height = 32, color = 'var(--pink)' } = {}) {
+  if (!points || points.length < 2) return h('svg', { class: 'spark', width, height, viewBox: `0 0 ${width} ${height}` });
+  const values = points.map((p) => p.v);
+  const min = Math.min(...values), max = Math.max(...values);
+  const range = max - min || 1;
+  const step = width / (points.length - 1);
+  const coords = values.map((v, i) => `${(i * step).toFixed(1)},${(height - ((v - min) / range) * (height - 4) - 2).toFixed(1)}`);
+  const svg = h('svg', { class: 'spark', width, height, viewBox: `0 0 ${width} ${height}` },
+    h('polyline', { points: coords.join(' '), fill: 'none', stroke: color, 'stroke-width': '1.6', 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+  return svg;
+}
+
+const FAULT_LABELS = { error: 'Break with errors', latency: 'Add latency', memory: 'Memory leak', crash: 'Crash', heal: 'Heal' };
+const pct = (v) => (v == null ? '–' : `${(v * 100).toFixed(1)}%`);
+const latencyText = (v) => (v == null ? '–' : `${(v * 1000).toFixed(0)}ms`);
+const bytesText = (v) => (v == null ? '–' : `${(v / (1024 * 1024)).toFixed(0)}MB`);
+
+async function sendFault(service, action, button) {
+  if (!token.value) { toast('Enter the admin token first', 'warn'); token.focus(); return; }
+  const buttons = button.closest('.card-actions').querySelectorAll('button');
+  buttons.forEach((b) => (b.disabled = true));
+  try {
+    const res = await fetch(`/api/fault/${service}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-token': token.value },
+      body: JSON.stringify({ action }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 401) toast('Wrong admin token', 'bad');
+    else if (res.status === 429) toast('Too many demo actions, slow down', 'warn');
+    else if (!res.ok) toast(body.error || `Failed (HTTP ${res.status})`, 'bad');
+    else toast(`${service}: ${FAULT_LABELS[action]}`, action === 'heal' ? 'ok' : 'warn');
+  } catch (err) { toast(err.message, 'bad'); }
+  buttons.forEach((b) => (b.disabled = false));
+  refreshHealth();
+}
+
+function renderCards(rows) {
+  $('cards').replaceChildren(...rows.map((r) => {
+    const statusClass = `status-${r.status}`;
+    return h('div', { class: 'card' },
+      h('div', { class: 'card-head' },
+        h('span', { class: 'name' }, r.service),
+        h('span', { class: `pill ${statusClass}` }, h('span', { class: 'status-dot' }), r.status)),
+      h('div', { class: 'metrics-row' },
+        h('div', { class: 'metric' }, h('div', { class: 'm-label' }, 'Error rate'), h('div', { class: 'm-value' }, pct(r.error_rate)),
+          sparkline(r.sparklines.error_rate, { color: 'var(--red)' })),
+        h('div', { class: 'metric' }, h('div', { class: 'm-label' }, 'p95 latency'), h('div', { class: 'm-value' }, latencyText(r.p95_latency_s)),
+          sparkline(r.sparklines.p95_latency_s, { color: 'var(--yellow)' })),
+        h('div', { class: 'metric' }, h('div', { class: 'm-label' }, 'Memory'), h('div', { class: 'm-value' }, bytesText(r.memory_bytes)),
+          sparkline(r.sparklines.memory_bytes, { color: 'var(--blue)' }))),
+      r.fault_mode && r.fault_mode !== 'none' ? h('span', { class: 'fault-badge' }, `active fault: ${r.fault_mode}`) : null,
+      h('div', { class: 'card-actions' }, ...['error', 'latency', 'memory', 'crash', 'heal'].map((action) =>
+        h('button', { class: action === 'heal' ? 'heal' : '', onclick: (e) => sendFault(r.service, action, e.target) }, FAULT_LABELS[action]))));
+  }));
+}
+
+async function refreshHealth() {
+  try { renderCards(await getJSON('/api/health/services')); } catch (err) { /* keep showing the last good cards */ }
+  try { $('outage-badge').hidden = !(await getJSON('/api/debug/outage')).armed; } catch { /* debug route not available */ }
+}
+
+// ---- "Simulate AI outage" demo switch ----
+$('outage-btn').addEventListener('click', async () => {
+  if (!token.value) { toast('Enter the admin token first', 'warn'); token.focus(); return; }
+  const btn = $('outage-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/debug/simulate-outage', { method: 'POST', headers: { 'x-admin-token': token.value } });
+    if (res.status === 401) toast('Wrong admin token', 'bad');
+    else if (res.status === 429) toast('Too many demo actions, slow down', 'warn');
+    else if (!res.ok) toast(`Failed (HTTP ${res.status})`, 'bad');
+    else { toast('🧪 AI outage armed — next diagnosis will fail', 'warn'); $('outage-badge').hidden = false; }
+  } catch (err) { toast(err.message, 'bad'); }
+  btn.disabled = false;
+});
+
+// ---- Pipeline stepper ----
+const STEPPER_STAGES = [
+  { key: 'webhook', label: 'Alert', idle: 'red' },
+  { key: 'retrieve', label: 'Search memory', idle: 'blue' },
+  { key: 'diagnose', label: 'AI diagnosis', idle: 'pink' },
+  { key: 'guardrail', label: 'Safety check', idle: 'purple' },
+  { key: 'resolution', label: 'Fix or Ticket', idle: 'green' },
+  { key: 'resolve', label: 'Resolved', idle: 'green' },
+];
+let currentIncidentId = null;
+let pipelineState = null; // { startedAt, outcomes: Map<key, {icon,color,message}>, service, alertname, confidence, decision, terminal }
+let pipelineTimer = null;
+
+function renderPipelineIdle() {
+  $('pipeline-service').textContent = '';
+  $('pipeline').replaceChildren(h('div', { class: 'pipeline-idle' }, 'No active incident. Inject a fault to watch the pipeline run.'));
+}
+
+function renderPipeline() {
+  if (!pipelineState) return renderPipelineIdle();
+  $('pipeline-service').textContent = `${pipelineState.service} · ${pipelineState.alertname}`;
+  const elapsedS = ((Date.now() - pipelineState.startedAt) / 1000).toFixed(1);
+  const firstUndone = STEPPER_STAGES.findIndex(({ key }) => !pipelineState.outcomes.has(key));
+  const nodes = STEPPER_STAGES.map(({ key, label, idle }, i) => {
+    const outcome = pipelineState.outcomes.get(key);
+    const done = Boolean(outcome);
+    const active = !done && i === firstUndone;
+    const color = outcome ? outcome.color : idle;
+    let cls = `step-node clr-${color}`;
+    if (done) cls += ' done'; else if (active) cls += ' active';
+    return h('div', { class: cls },
+      h('div', { class: 'step-circle' }, outcome ? outcome.icon : active ? '⏳' : String(i + 1)),
+      h('span', { class: 'step-line' }),
+      h('span', { class: 'step-label' }, label),
+      outcome && outcome.message ? h('span', { class: 'step-msg' }, outcome.message) : null);
+  });
+  const detail = [];
+  if (pipelineState.confidence != null) detail.push(h('span', {}, h('b', {}, 'Confidence: '), conf(pipelineState.confidence)));
+  if (pipelineState.decision) detail.push(h('span', {}, h('b', {}, 'Decision: '), tagEl(pipelineState.decision, pipelineState.decision === 'execute' ? 'ok' : 'ticket')));
+  detail.push(h('span', { class: 'timer' }, `${elapsedS}s elapsed`));
+  $('pipeline').replaceChildren(h('div', { class: 'stepper' }, ...nodes), h('div', { class: 'pipeline-detail' }, ...detail));
+}
+
+function startPipelineTimer() {
+  clearInterval(pipelineTimer);
+  pipelineTimer = setInterval(() => { if (pipelineState && !pipelineState.terminal) renderPipeline(); }, 200);
+}
+
+function onPipelineEvent(e) {
+  if (e.step === 'webhook') {
+    currentIncidentId = e.incident_id;
+    pipelineState = { startedAt: Date.now(), outcomes: new Map(), service: e.detail.service, alertname: e.detail.alertname,
+      confidence: null, decision: null, terminal: false };
+    pipelineState.outcomes.set('webhook', stepOutcome('webhook', e.detail));
+    startPipelineTimer();
+    renderPipeline();
+    return;
+  }
+  if (e.incident_id !== currentIncidentId || !pipelineState) return;
+  if (e.step === 'retrieve') pipelineState.outcomes.set('retrieve', stepOutcome('retrieve', e.detail));
+  else if (e.step === 'diagnose') { pipelineState.outcomes.set('diagnose', stepOutcome('diagnose', e.detail)); pipelineState.confidence = e.detail.confidence; }
+  else if (e.step === 'guardrail') { pipelineState.outcomes.set('guardrail', stepOutcome('guardrail', e.detail)); pipelineState.decision = e.detail.decision; }
+  else if (e.step === 'act' || e.step === 'ticket') pipelineState.outcomes.set('resolution', stepOutcome(e.step, e.detail));
+  else if (e.step === 'resolve') { pipelineState.outcomes.set('resolve', stepOutcome('resolve', e.detail)); pipelineState.terminal = true; clearInterval(pipelineTimer); }
+  else if (e.step === 'error') {
+    const key = STEPPER_STAGES[Math.max(0, pipelineState.outcomes.size)]?.key || 'resolution';
+    pipelineState.outcomes.set(key, stepOutcome('error', e.detail));
+    pipelineState.terminal = true;
+    clearInterval(pipelineTimer);
+  }
+  renderPipeline();
+}
+renderPipelineIdle();
+
+// ---- toasts for key pipeline events ----
+function toastForEvent(e) {
+  const d = e.detail || {};
+  const who = known.get(e.incident_id);
+  const service = (who && who.service) || d.service || '';
+  if (e.step === 'act' && d.ok) toast(`✅ Auto-fixed ${service}: ${d.action}`, 'ok');
+  else if (e.step === 'act' && d.ok === false) toast(`❌ Fix failed on ${service}`, 'bad');
+  else if (e.step === 'ticket' && d.status !== 'rejected') toast(`🎫 Ticket opened for ${service}`, 'ticket');
+  else if (e.step === 'resolve') toast(`✅ Resolved: ${service}`, 'ok');
+}
 
 async function refresh() {
   try {
     const [stats, incidents, tickets] = await Promise.all([
-      getJSON('/api/stats'), getJSON('/api/incidents?limit=20'), getJSON('/api/tickets?status=open')]);
+      getJSON('/api/stats'), getJSON('/api/incidents?limit=100'), getJSON('/api/tickets?status=open')]);
     renderStats(stats); renderIncidents(incidents); renderTickets(tickets);
-  } catch (err) { toast(err.message); }
+  } catch (err) { toast(err.message, 'bad'); }
 }
 let pending;
 const scheduleRefresh = () => { clearTimeout(pending); pending = setTimeout(refresh, 400); };
@@ -283,11 +703,20 @@ function connect() {
   const conn = $('conn');
   es.onopen = () => { conn.textContent = 'live'; conn.className = 'pill live'; refresh(); };
   es.onerror = () => { conn.textContent = 'reconnecting'; conn.className = 'pill down'; };
-  es.addEventListener('audit', (msg) => { addEvent(JSON.parse(msg.data)); scheduleRefresh(); });
+  es.addEventListener('audit', (msg) => {
+    const e = JSON.parse(msg.data);
+    addEvent(e);
+    onPipelineEvent(e);
+    toastForEvent(e);
+    scheduleRefresh();
+    refreshHealth();
+  });
 }
 refresh();
+refreshHealth();
 connect();
 setInterval(refresh, 30000); // stats age even when nothing happens
+setInterval(refreshHealth, 5000); // live sparklines + outage-armed badge
 </script>
 </body>
 </html>
