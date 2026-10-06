@@ -57,8 +57,11 @@
   .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
   .live { color: var(--green); background: rgba(255,255,255,.22); } .down { color: #fff; background: rgba(0,0,0,.22); }
   header .pill.live { color: #fff; } header .pill.down { color: #fff; }
-  input[type=password] { font: inherit; padding: 5px 8px; border: 1px solid rgba(255,255,255,.5); border-radius: 6px; background: rgba(255,255,255,.18); color: #fff; width: 190px; }
-  input[type=password]::placeholder { color: rgba(255,255,255,.75); }
+  .token-wrap { position: relative; display: inline-flex; align-items: center; }
+  #token { font: inherit; padding: 5px 30px 5px 8px; border: 1px solid rgba(255,255,255,.5); border-radius: 6px; background: rgba(255,255,255,.18); color: #fff; width: 190px; }
+  #token::placeholder { color: rgba(255,255,255,.75); }
+  .token-toggle { position: absolute; right: 2px; padding: 3px 6px; border: none; background: transparent; line-height: 1; }
+  .token-toggle:hover:not(:disabled) { background: rgba(255,255,255,.18); border-color: transparent; color: #fff; }
   header label { color: rgba(255,255,255,.9) !important; }
   select { font: inherit; padding: 4px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); }
   button { font: inherit; font-weight: 600; padding: 5px 11px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer; }
@@ -189,7 +192,10 @@
     <span id="conn" class="pill down">connecting</span>
     <button id="theme-toggle" class="icon-btn" title="Toggle dark / light theme" type="button">🌓</button>
     <label for="token">Admin token</label>
-    <input id="token" type="password" autocomplete="off" placeholder="needed to approve/reject/fault">
+    <span class="token-wrap">
+      <input id="token" type="password" autocomplete="off" placeholder="needed to approve/reject/fault">
+      <button id="token-toggle" class="icon-btn token-toggle" type="button" title="Show token" aria-label="Show token">👁</button>
+    </span>
   </div>
 </header>
 
@@ -306,6 +312,14 @@ function toast(text, kind = 'info') {
 const token = $('token');
 try { token.value = localStorage.getItem('adminToken') || ''; } catch {}
 token.addEventListener('input', () => { try { localStorage.setItem('adminToken', token.value); } catch {} });
+
+const tokenToggle = $('token-toggle');
+tokenToggle.addEventListener('click', () => {
+  const shown = token.type === 'text';
+  token.type = shown ? 'password' : 'text';
+  tokenToggle.textContent = shown ? '👁' : '🙈';
+  tokenToggle.title = tokenToggle.ariaLabel = shown ? 'Show token' : 'Hide token';
+});
 
 async function getJSON(url) {
   const res = await fetch(url);
